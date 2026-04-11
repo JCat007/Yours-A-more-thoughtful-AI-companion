@@ -1,0 +1,45 @@
+{
+  "gateway": {
+    "mode": "local",
+    "http": {
+      "endpoints": {
+        "chatCompletions": { "enabled": true }
+      }
+    }
+  },
+  "env": {
+    "MINIMAX_API_KEY": "请替换为你的MiniMax_API_Key_形如sk-xxxx"
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "minimax/MiniMax-M2.5",
+        "fallbacks": ["openai-codex/gpt-5.3-codex"]
+      },
+      "models": {
+        "minimax/MiniMax-M2.5": { "alias": "MiniMax" },
+        "openai-codex/gpt-5.3-codex": { "alias": "Codex" }
+      }
+    }
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "minimax": {
+        "baseUrl": "https://api.minimaxi.com/anthropic",
+        "apiKey": "${MINIMAX_API_KEY}",
+        "api": "anthropic-messages",
+        "models": [
+          {
+            "id": "MiniMax-M2.5",
+            "name": "MiniMax M2.5",
+            "reasoning": false,
+            "input": ["text"],
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
+      }
+    }
+  }
+}

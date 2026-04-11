@@ -1,0 +1,4 @@
+# 确保 shell 脚本使用 LF，避免 WSL 下 "cannot execute: required file not found"
+*.sh text eol=lf
+# Windows CMD 需要 CRLF；LF-only 的 .bat 在 UNC 路径下会把多行粘成乱命令（如 setlocal 变成 tlocal）
+*.bat text eol=crlf

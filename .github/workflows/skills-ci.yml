@@ -1,0 +1,49 @@
+name: skills-smoke
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system deps
+        run: |
+          chmod +x scripts/setup-system-deps.sh
+          ./scripts/setup-system-deps.sh
+
+      - name: Setup shared Python venv
+        env:
+          PYTHON_SKILLS_VENV: ${{ github.workspace }}/.venv/python-skills
+        run: |
+          chmod +x scripts/setup-openclaw-python-venv.sh
+          ./scripts/setup-openclaw-python-venv.sh
+          "$PYTHON_SKILLS_VENV/bin/python" -m pip -V
+          "$PYTHON_SKILLS_VENV/bin/python" -c "import markitdown,pypdf,pdfplumber,pandas,openpyxl,defusedxml; print('python smoke ok')"
+          "$PYTHON_SKILLS_VENV/bin/markitdown" --help >/dev/null
+
+      - name: Binary smoke
+        run: |
+          which ffmpeg
+          which pandoc
+          which pdftoppm
+          which tesseract
+          which qpdf
+          which soffice

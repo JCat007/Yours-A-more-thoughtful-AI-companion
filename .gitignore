@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Star Office UI (可选子系统：第二阶段再部署)
+/star-office-ui/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.*
+!.env.example
+!**/.env.example
+scripts/dev-wsl.config.bat
+
+# Ephemeral local companion state (private; recreated at runtime — see backend/src/services/bellaState.ts)
+backend/data/
+
+# Local scratch (often gateway URLs/tokens)
+gateway.txt
+
+# Windows reserved name accidentally created as a repo file under WSL/Linux
+/nul
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+prisma/migrations/

@@ -1,0 +1,34 @@
+# Local PostgreSQL + pgvector (development). Variables come from backend/.env — one file with the app.
+#
+# From repo root (after backend/.env exists and POSTGRES_PASSWORD is set):
+#   docker compose --env-file backend/.env up -d
+#
+# Or: npm run docker:db  (from repo root)
+#
+# Host port is bound to 127.0.0.1 only (see BELLA_PG_HOST_PORT in backend/.env.example).
+
+name: bella-dev
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: bella-postgres-pgvector
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bella}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-bella}
+    ports:
+      - '127.0.0.1:${BELLA_PG_HOST_PORT:-55432}:5432'
+    volumes:
+      - bella_pgdata:/var/lib/postgresql/data
+      - ./scripts/docker-init-pgvector.sql:/docker-entrypoint-initdb.d/10-pgvector.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+volumes:
+  bella_pgdata:

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "defaults": {
+    "security": "allowlist",
+    "ask": "off",
+    "askFallback": "allowlist",
+    "autoAllowSkills": true
+  },
+  "agents": {
+    "main": {
+      "security": "allowlist",
+      "ask": "off",
+      "askFallback": "allowlist",
+      "autoAllowSkills": true,
+      "allowlist": [
+        {"id": "sh", "pattern": "/bin/sh"},
+        {"id": "node", "pattern": "/usr/bin/node"}
+      ]
+    }
+  }
+}

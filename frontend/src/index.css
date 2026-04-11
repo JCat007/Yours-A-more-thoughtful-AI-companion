@@ -1,0 +1,1406 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* ---------- Bella root theme: soft, airy, warm palette (light/dark) ---------- */
+.bella {
+  min-height: 100vh;
+  background: radial-gradient(1200px 600px at 20% 10%, rgba(255, 214, 165, 0.55), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(251, 146, 60, 0.35), transparent 55%),
+    linear-gradient(180deg, rgba(255, 246, 238, 0.9), rgba(255, 235, 217, 0.92));
+}
+/* Prefer modern viewport units to reduce mobile URL-bar reflow. */
+@supports (height: 100dvh) {
+  .bella { min-height: 100dvh; }
+}
+@supports (height: 100svh) {
+  .bella { min-height: 100svh; }
+}
+
+.bella-header {
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid rgba(251, 146, 60, 0.25);
+  backdrop-filter: saturate(140%) blur(6px);
+  -webkit-backdrop-filter: saturate(140%) blur(6px);
+}
+
+.bella-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #7c2d12;
+}
+
+.bella-subtitle {
+  font-size: 0.875rem;
+  color: rgba(124, 45, 18, 0.7);
+  margin-top: 0.25rem;
+}
+
+.bella-brand-word {
+  display: inline-block;
+  margin-bottom: 0.1rem;
+  font-size: clamp(1.45rem, 2.35vw, 1.75rem);
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  font-family: "Cinzel Decorative", "Goudy Old Style", "Book Antiqua", "Papyrus", serif;
+  color: #7c2d12;
+  text-shadow:
+    0 0 1px rgba(124, 45, 18, 0.45),
+    0 0 8px rgba(251, 146, 60, 0.28),
+    0 2px 5px rgba(124, 45, 18, 0.2);
+}
+
+.bella-header-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.bella-settings-wrap {
+  position: relative;
+}
+
+.bella-settings-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  min-width: 176px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 30;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px rgba(124, 45, 18, 0.18);
+}
+
+.bella-main {
+  background: transparent;
+}
+
+.bella-btn-outline {
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(251, 146, 60, 0.55);
+  color: #7c2d12;
+  background: rgba(255, 255, 255, 0.7);
+  transition: box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.bella-btn-outline:hover {
+  background: rgba(251, 146, 60, 0.15);
+  border-color: rgba(251, 146, 60, 0.75);
+  box-shadow: 0 6px 18px rgba(251, 146, 60, 0.22);
+}
+
+/* ---------- Bella Chat: office style ---------- */
+.bella-page-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  background: radial-gradient(1200px 600px at 20% 10%, rgba(255, 214, 165, 0.55), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(251, 146, 60, 0.35), transparent 55%),
+    linear-gradient(180deg, rgba(255, 246, 238, 0.9), rgba(255, 235, 217, 0.92)) !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.bella-page-inner {
+  min-height: 0;
+  height: 100%;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bella-responsive-card {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bella-chat-shell {
+  background: rgba(255, 255, 255, 0.55) !important;
+  border-left: none;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.bella-memo-content {
+  margin: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  background: rgba(255, 255, 255, 0.68);
+  min-height: 68vh;
+}
+@supports (height: 1svh) {
+  .bella-memo-content { min-height: 68svh; }
+}
+@supports (height: 1dvh) {
+  .bella-memo-content { min-height: 68dvh; }
+}
+
+.bella-memo-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bella-memo-content::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+.bella-memo-content::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+
+.bella-chat-placeholder {
+  color: rgba(124, 45, 18, 0.7);
+}
+
+.bella-avatar-glow {
+  /* Opaque backing so transparent PNG avatars do not show the browser’s alpha checkerboard */
+  background-color: #fff;
+  box-shadow: 0 0 14px rgba(251, 146, 60, 0.35);
+}
+
+.bella-assistant-bubble {
+  color: #7c2d12;
+  background: rgba(255, 247, 237, 0.95);
+  border: 1px solid rgba(251, 146, 60, 0.25);
+}
+
+.bella-user-bubble {
+  color: #7c2d12;
+  background: rgba(251, 146, 60, 0.15);
+  border: 1px solid rgba(251, 146, 60, 0.45);
+}
+
+.bella-toolbar-btn {
+  cursor: pointer;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  background: rgba(255, 255, 255, 0.6);
+  color: #7c2d12;
+  border-radius: 6px;
+  padding: 4px 8px;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.bella-toolbar-btn:hover {
+  border-color: rgba(251, 146, 60, 0.65);
+}
+
+.bella-toolbar-btn-active {
+  border-color: rgba(251, 146, 60, 0.8);
+  background: rgba(251, 146, 60, 0.18);
+  color: #7c2d12;
+}
+
+.bella-broker-input {
+  width: 100%;
+  min-height: 66px;
+  max-height: 40vh; /* fallback */
+  resize: vertical;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(255, 245, 232, 0.96);
+  color: #7c2d12;
+  padding: 8px 10px;
+  line-height: 1.45;
+}
+@supports (height: 1svh) {
+  .bella-broker-input { max-height: 40svh; }
+}
+@supports (height: 1dvh) {
+  .bella-broker-input { max-height: 40dvh; }
+}
+
+.bella-broker-input:focus {
+  outline: none;
+  border-color: rgba(251, 146, 60, 0.8);
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.25);
+}
+
+.bella-broker-input::placeholder {
+  color: rgba(124, 45, 18, 0.5);
+}
+
+.bella-circle-btn {
+  border-radius: 9999px;
+  cursor: pointer;
+  border: 1px solid rgba(251, 146, 60, 0.6);
+  background: rgba(251, 146, 60, 0.18);
+  color: #7c2d12;
+  transition: border-color 0.16s ease, background 0.16s ease, opacity 0.16s ease;
+}
+
+.bella-circle-btn:hover {
+  border-color: rgba(251, 146, 60, 0.9);
+  background: rgba(251, 146, 60, 0.28);
+}
+
+.bella-circle-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bella-circle-btn-recording {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.bella-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  border-radius: 9999px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: #7c2d12;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.bella-file-chip-remove {
+  border: 0;
+  background: transparent;
+  color: rgba(124, 45, 18, 0.55);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+
+.bella-download-link {
+  border: 1px solid rgba(251, 146, 60, 0.45);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: rgba(124, 45, 18, 0.95);
+  background: rgba(251, 146, 60, 0.15);
+  text-decoration: none;
+}
+
+.bella-download-link:hover {
+  border-color: rgba(251, 146, 60, 0.8);
+  background: rgba(251, 146, 60, 0.22);
+}
+
+.bella-debug-panel {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 8px;
+  background: rgba(11, 18, 32, 0.92);
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.bella-debug-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.bella-debug-body {
+  padding: 8px;
+  line-height: 1.45;
+}
+
+.bella-debug-events {
+  margin-top: 6px;
+  max-height: 120px;
+  overflow: auto;
+  border-top: 1px dashed rgba(148, 163, 184, 0.2);
+  padding-top: 6px;
+}
+
+.bella-debug-event-error {
+  color: #fca5a5;
+}
+
+/* ---------- Dark Mode (自动) ---------- */
+@media (prefers-color-scheme: dark) {
+  .bella {
+    background:
+      radial-gradient(1200px 600px at 20% 10%, rgba(251, 146, 60, 0.12), transparent 60%),
+      radial-gradient(900px 500px at 80% 20%, rgba(251, 146, 60, 0.08), transparent 55%),
+      linear-gradient(180deg, rgba(19, 15, 11, 0.92), rgba(20, 16, 12, 0.96));
+  }
+
+  .bella-header {
+    background: rgba(22, 18, 14, 0.65);
+    border-bottom: 1px solid rgba(251, 146, 60, 0.25);
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+  }
+
+  .bella-title {
+    color: #fde68a;
+  }
+
+  .bella-subtitle {
+    color: rgba(253, 230, 138, 0.75);
+  }
+
+  .bella-brand-word {
+    color: #fde68a;
+    text-shadow:
+      0 0 2px rgba(253, 230, 138, 0.45),
+      0 0 12px rgba(251, 146, 60, 0.35),
+      0 2px 8px rgba(0, 0, 0, 0.55);
+  }
+
+  .bella-settings-panel {
+    border-color: rgba(251, 146, 60, 0.35);
+    background: rgba(28, 21, 16, 0.94);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  .bella-btn-outline {
+    border-color: rgba(251, 146, 60, 0.45);
+    color: #fde68a;
+    background: rgba(251, 146, 60, 0.1);
+  }
+  .bella-btn-outline:hover {
+    background: rgba(251, 146, 60, 0.18);
+    border-color: rgba(251, 146, 60, 0.7);
+    box-shadow: 0 8px 22px rgba(251, 146, 60, 0.2);
+  }
+
+  .bella-page-shell {
+    background:
+      radial-gradient(1200px 600px at 20% 10%, rgba(251, 146, 60, 0.12), transparent 60%),
+      radial-gradient(900px 500px at 80% 20%, rgba(251, 146, 60, 0.08), transparent 55%),
+      linear-gradient(180deg, rgba(23, 18, 14, 0.94), rgba(12, 10, 8, 0.98)) !important;
+  }
+
+  .bella-chat-shell {
+    background: rgba(20, 16, 12, 0.85) !important;
+    border-color: rgba(71, 85, 105, 0.3);
+  }
+
+  .bella-memo-content {
+    border-color: rgba(71, 85, 105, 0.32);
+    background: rgba(17, 14, 11, 0.85);
+  }
+
+  .bella-chat-placeholder {
+    color: rgba(253, 230, 138, 0.75);
+  }
+
+  .bella-avatar-glow {
+    box-shadow: 0 0 14px rgba(251, 146, 60, 0.25);
+  }
+
+  .bella-assistant-bubble {
+    color: #fde68a;
+    background: rgba(34, 27, 21, 0.85);
+    border: 1px solid rgba(251, 146, 60, 0.25);
+  }
+
+  .bella-user-bubble {
+    color: #fde68a;
+    background: rgba(251, 146, 60, 0.15);
+    border: 1px solid rgba(251, 146, 60, 0.4);
+  }
+
+  .bella-toolbar-btn {
+    border: 1px solid rgba(71, 85, 105, 0.35);
+    background: rgba(34, 27, 21, 0.65);
+    color: #fde68a;
+  }
+  .bella-toolbar-btn:hover {
+    border-color: rgba(251, 146, 60, 0.6);
+  }
+  .bella-toolbar-btn-active {
+    border-color: rgba(251, 146, 60, 0.8);
+    background: rgba(251, 146, 60, 0.2);
+    color: #fde68a;
+  }
+
+  .bella-broker-input {
+    border: 1px solid rgba(71, 85, 105, 0.35);
+    background: rgba(20, 16, 12, 0.9);
+    color: #fde68a;
+  }
+  .bella-broker-input:focus {
+    outline: none;
+    border-color: rgba(251, 146, 60, 0.8);
+    box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.22);
+  }
+  .bella-broker-input::placeholder {
+    color: rgba(253, 230, 138, 0.55);
+  }
+
+  .bella-circle-btn {
+    border-color: rgba(251, 146, 60, 0.55);
+    background: rgba(251, 146, 60, 0.15);
+    color: #fde68a;
+  }
+  .bella-circle-btn:hover {
+    border-color: rgba(251, 146, 60, 0.85);
+    background: rgba(251, 146, 60, 0.25);
+  }
+  .bella-circle-btn-recording {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.25);
+  }
+
+  .bella-file-chip {
+    border: 1px solid rgba(71, 85, 105, 0.35);
+    color: #fde68a;
+    background: rgba(34, 27, 21, 0.65);
+  }
+  .bella-file-chip-remove {
+    color: rgba(253, 230, 138, 0.7);
+  }
+
+  .bella-download-link {
+    border: 1px solid rgba(251, 146, 60, 0.45);
+    color: #fde68a;
+    background: rgba(251, 146, 60, 0.15);
+  }
+  .bella-download-link:hover {
+    border-color: rgba(251, 146, 60, 0.8);
+    background: rgba(251, 146, 60, 0.22);
+  }
+}
+
+/* ---------- Force Theme via class (manual toggle) ---------- */
+.bella.is-dark {
+  background:
+    radial-gradient(1200px 600px at 20% 10%, rgba(251, 146, 60, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(251, 146, 60, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(19, 15, 11, 0.92), rgba(20, 16, 12, 0.96));
+}
+.bella.is-dark .bella-header {
+  background: rgba(22, 18, 14, 0.65);
+  border-bottom: 1px solid rgba(251, 146, 60, 0.25);
+  backdrop-filter: saturate(140%) blur(6px);
+  -webkit-backdrop-filter: saturate(140%) blur(6px);
+}
+.bella.is-dark .bella-title { color: #fde68a; }
+.bella.is-dark .bella-subtitle { color: rgba(253, 230, 138, 0.75); }
+.bella.is-dark .bella-brand-word {
+  color: #fde68a;
+  text-shadow:
+    0 0 2px rgba(253, 230, 138, 0.45),
+    0 0 12px rgba(251, 146, 60, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.55);
+}
+.bella.is-dark .bella-settings-panel {
+  border-color: rgba(251, 146, 60, 0.35);
+  background: rgba(28, 21, 16, 0.94);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+.bella.is-dark .bella-btn-outline {
+  border-color: rgba(251, 146, 60, 0.45);
+  color: #fde68a;
+  background: rgba(251, 146, 60, 0.1);
+}
+.bella.is-dark .bella-btn-outline:hover {
+  background: rgba(251, 146, 60, 0.18);
+  border-color: rgba(251, 146, 60, 0.7);
+  box-shadow: 0 8px 22px rgba(251, 146, 60, 0.2);
+}
+.bella.is-dark .bella-page-shell {
+  background:
+    radial-gradient(1200px 600px at 20% 10%, rgba(251, 146, 60, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(251, 146, 60, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(23, 18, 14, 0.94), rgba(12, 10, 8, 0.98)) !important;
+}
+.bella.is-dark .bella-chat-shell {
+  background: rgba(20, 16, 12, 0.85) !important;
+  border-color: rgba(71, 85, 105, 0.3);
+}
+.bella.is-dark .bella-memo-content {
+  border-color: rgba(71, 85, 105, 0.32);
+  background: rgba(17, 14, 11, 0.85);
+}
+.bella.is-dark .bella-chat-placeholder { color: rgba(253, 230, 138, 0.75); }
+.bella.is-dark .bella-avatar-glow { box-shadow: 0 0 14px rgba(251, 146, 60, 0.25); }
+.bella.is-dark .bella-assistant-bubble {
+  color: #fde68a;
+  background: rgba(34, 27, 21, 0.85);
+  border: 1px solid rgba(251, 146, 60, 0.25);
+}
+.bella.is-dark .bella-user-bubble {
+  color: #fde68a;
+  background: rgba(251, 146, 60, 0.15);
+  border: 1px solid rgba(251, 146, 60, 0.4);
+}
+.bella.is-dark .bella-toolbar-btn {
+  border: 1px solid rgba(71, 85, 105, 0.35);
+  background: rgba(34, 27, 21, 0.65);
+  color: #fde68a;
+}
+.bella.is-dark .bella-toolbar-btn:hover { border-color: rgba(251, 146, 60, 0.6); }
+.bella.is-dark .bella-toolbar-btn-active {
+  border-color: rgba(251, 146, 60, 0.8);
+  background: rgba(251, 146, 60, 0.2);
+  color: #fde68a;
+}
+.bella.is-dark .bella-broker-input {
+  border: 1px solid rgba(71, 85, 105, 0.35);
+  background: rgba(20, 16, 12, 0.9);
+  color: #fde68a;
+}
+.bella.is-dark .bella-broker-input:focus {
+  outline: none;
+  border-color: rgba(251, 146, 60, 0.8);
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.22);
+}
+.bella.is-dark .bella-broker-input::placeholder { color: rgba(253, 230, 138, 0.55); }
+.bella.is-dark .bella-circle-btn {
+  border-color: rgba(251, 146, 60, 0.55);
+  background: rgba(251, 146, 60, 0.15);
+  color: #fde68a;
+}
+.bella.is-dark .bella-circle-btn:hover {
+  border-color: rgba(251, 146, 60, 0.85);
+  background: rgba(251, 146, 60, 0.25);
+}
+.bella.is-dark .bella-circle-btn-recording { border-color: #ef4444; background: rgba(239, 68, 68, 0.25); }
+.bella.is-dark .bella-file-chip {
+  border: 1px solid rgba(71, 85, 105, 0.35);
+  color: #fde68a;
+  background: rgba(34, 27, 21, 0.65);
+}
+.bella.is-dark .bella-file-chip-remove { color: rgba(253, 230, 138, 0.7); }
+.bella.is-dark .bella-download-link {
+  border: 1px solid rgba(251, 146, 60, 0.45);
+  color: #fde68a;
+  background: rgba(251, 146, 60, 0.15);
+}
+.bella.is-dark .bella-download-link:hover {
+  border-color: rgba(251, 146, 60, 0.8);
+  background: rgba(251, 146, 60, 0.22);
+}
+
+.bella.is-light {
+  /* Force light overrides against dark media styles */
+  background: radial-gradient(1200px 600px at 20% 10%, rgba(255, 214, 165, 0.55), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(251, 146, 60, 0.35), transparent 55%),
+    linear-gradient(180deg, rgba(255, 246, 238, 0.9), rgba(255, 235, 217, 0.92));
+}
+.bella.is-light .bella-header {
+  background: rgba(255, 255, 255, 0.72);
+  border-bottom: 1px solid rgba(251, 146, 60, 0.25);
+}
+.bella.is-light .bella-title { color: #7c2d12; }
+.bella.is-light .bella-subtitle { color: rgba(124, 45, 18, 0.7); }
+.bella.is-light .bella-brand-word {
+  color: #7c2d12;
+  text-shadow:
+    0 0 1px rgba(124, 45, 18, 0.45),
+    0 0 8px rgba(251, 146, 60, 0.28),
+    0 2px 5px rgba(124, 45, 18, 0.2);
+}
+.bella.is-light .bella-settings-panel {
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px rgba(124, 45, 18, 0.18);
+}
+.bella.is-light .bella-btn-outline {
+  border: 1px solid rgba(251, 146, 60, 0.55);
+  color: #7c2d12;
+  background: rgba(255, 255, 255, 0.7);
+}
+.bella.is-light .bella-btn-outline:hover {
+  background: rgba(251, 146, 60, 0.15);
+  border-color: rgba(251, 146, 60, 0.75);
+  box-shadow: 0 6px 18px rgba(251, 146, 60, 0.22);
+}
+.bella.is-light .bella-page-shell {
+  background: radial-gradient(1200px 600px at 20% 10%, rgba(255, 214, 165, 0.55), transparent 60%),
+    radial-gradient(900px 500px at 80% 20%, rgba(251, 146, 60, 0.35), transparent 55%),
+    linear-gradient(180deg, rgba(255, 246, 238, 0.9), rgba(255, 235, 217, 0.92)) !important;
+}
+.bella.is-light .bella-chat-shell { background: rgba(255, 255, 255, 0.55) !important; }
+.bella.is-light .bella-memo-content {
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  background: rgba(255, 255, 255, 0.68);
+}
+.bella.is-light .bella-chat-placeholder { color: rgba(124, 45, 18, 0.7); }
+.bella.is-light .bella-avatar-glow { box-shadow: 0 0 14px rgba(251, 146, 60, 0.35); }
+.bella.is-light .bella-assistant-bubble {
+  color: #7c2d12;
+  background: rgba(255, 247, 237, 0.95);
+  border: 1px solid rgba(251, 146, 60, 0.25);
+}
+.bella.is-light .bella-user-bubble {
+  color: #7c2d12;
+  background: rgba(251, 146, 60, 0.15);
+  border: 1px solid rgba(251, 146, 60, 0.45);
+}
+.bella.is-light .bella-toolbar-btn {
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  background: rgba(255, 255, 255, 0.6);
+  color: #7c2d12;
+}
+.bella.is-light .bella-toolbar-btn:hover { border-color: rgba(251, 146, 60, 0.65); }
+.bella.is-light .bella-toolbar-btn-active {
+  border-color: rgba(251, 146, 60, 0.8);
+  background: rgba(251, 146, 60, 0.18);
+  color: #7c2d12;
+}
+.bella.is-light .bella-broker-input {
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(255, 245, 232, 0.96);
+  color: #7c2d12;
+}
+.bella.is-light .bella-broker-input:focus {
+  outline: none;
+  border-color: rgba(251, 146, 60, 0.8);
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.25);
+}
+.bella.is-light .bella-broker-input::placeholder { color: rgba(124, 45, 18, 0.5); }
+.bella.is-light .bella-circle-btn {
+  border: 1px solid rgba(251, 146, 60, 0.6);
+  background: rgba(251, 146, 60, 0.18);
+  color: #7c2d12;
+}
+.bella.is-light .bella-circle-btn:hover {
+  border-color: rgba(251, 146, 60, 0.9);
+  background: rgba(251, 146, 60, 0.28);
+}
+.bella.is-light .bella-circle-btn-recording { border-color: #ef4444; background: rgba(239, 68, 68, 0.25); }
+.bella.is-light .bella-file-chip {
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  color: #7c2d12;
+  background: rgba(255, 255, 255, 0.7);
+}
+.bella.is-light .bella-file-chip-remove { color: rgba(124, 45, 18, 0.55); }
+.bella.is-light .bella-download-link {
+  border: 1px solid rgba(251, 146, 60, 0.45);
+  color: rgba(124, 45, 18, 0.95);
+  background: rgba(251, 146, 60, 0.15);
+}
+.bella.is-light .bella-download-link:hover {
+  border-color: rgba(251, 146, 60, 0.8);
+  background: rgba(251, 146, 60, 0.22);
+}
+
+.bella.is-dark .bella-copy-btn {
+  border-color: rgba(251, 146, 60, 0.45);
+  background: rgba(251, 146, 60, 0.16);
+  color: #fde68a;
+}
+.bella.is-dark .bella-copy-btn:hover {
+  border-color: rgba(251, 146, 60, 0.8);
+  background: rgba(251, 146, 60, 0.24);
+}
+.bella.is-dark .bella-md-pre {
+  border-color: rgba(251, 146, 60, 0.3);
+  background: rgba(20, 16, 12, 0.62);
+}
+.bella.is-dark .bella-md-code {
+  border-color: rgba(251, 146, 60, 0.3);
+  background: rgba(20, 16, 12, 0.58);
+}
+.bella.is-dark .bella-md-link {
+  color: #fde68a;
+}
+.bella.is-dark .bella-md-link:hover {
+  color: #fff3bf;
+}
+.bella.is-dark .bella-md-blockquote {
+  border-left-color: rgba(251, 146, 60, 0.7);
+  background: rgba(251, 146, 60, 0.12);
+}
+.bella.is-dark .bella-md-hr {
+  border-top-color: rgba(251, 146, 60, 0.45);
+}
+.bella.is-dark .bella-md-table {
+  border-color: rgba(251, 146, 60, 0.35);
+}
+.bella.is-dark .bella-md-th,
+.bella.is-dark .bella-md-td {
+  border-color: rgba(251, 146, 60, 0.28);
+}
+.bella.is-dark .bella-md-th {
+  background: rgba(251, 146, 60, 0.22);
+}
+.bella.is-dark .bella-md-table tbody tr:nth-child(odd) {
+  background: rgba(251, 146, 60, 0.09);
+}
+.bella.is-dark .bella-md-table tbody tr:hover {
+  background: rgba(251, 146, 60, 0.18);
+}
+
+/* ---------- Bella Modal & Inline Elements ---------- */
+.bella-modal {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  box-shadow: 0 10px 30px rgba(251, 146, 60, 0.15);
+}
+.bella-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.bella-modal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #7c2d12;
+}
+.bella-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: rgba(251, 146, 60, 0.12);
+  color: #7c2d12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, transform 0.1s ease;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+}
+.bella-modal-close:hover {
+  background: rgba(251, 146, 60, 0.2);
+}
+.bella-modal-close:active {
+  transform: scale(0.98);
+}
+
+/* Scrollable body inside Mode & Capabilities (tall skill lists + toggles). */
+.bella-modal-scroll {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+}
+.bella-modal-scroll::-webkit-scrollbar {
+  width: 14px;
+}
+.bella-modal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(124, 45, 18, 0.45);
+  border-radius: 8px;
+  border: 3px solid rgba(255, 255, 255, 0.65);
+}
+.bella-modal-scroll::-webkit-scrollbar-track {
+  background: rgba(124, 45, 18, 0.1);
+  border-radius: 8px;
+}
+
+.bella-header-auth-wrap {
+  position: relative;
+}
+/* Companion memory editor (/bella/memory) */
+.bella-memory-page-title {
+  color: #9a3412;
+  letter-spacing: 0.02em;
+}
+.bella.is-dark .bella-memory-page-title {
+  color: #fcd34d;
+}
+.bella-memory-alert-error {
+  color: #dc2626 !important;
+  font-weight: 700;
+}
+.bella.is-dark .bella-memory-alert-error {
+  color: #f87171 !important;
+}
+
+/* /bella/memory — theme-aware chrome (avoid white text on light shell). */
+.bella-memory-page.bella-memory-chrome {
+  background: rgba(0, 0, 0, 0.22);
+}
+.bella.is-light .bella-memory-page.bella-memory-chrome {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(251, 146, 60, 0.22);
+  border-radius: 12px;
+}
+.bella-memory-topbar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.bella.is-light .bella-memory-topbar {
+  border-bottom-color: rgba(251, 146, 60, 0.28);
+}
+.bella-memory-body-text {
+  color: rgba(254, 243, 199, 0.92);
+}
+.bella.is-light .bella-memory-body-text {
+  color: #451a03;
+}
+.bella-memory-muted {
+  color: rgba(254, 243, 199, 0.78);
+}
+.bella.is-light .bella-memory-muted {
+  color: rgba(124, 45, 18, 0.75);
+}
+.bella-memory-slug {
+  color: rgba(254, 243, 199, 0.55);
+}
+.bella.is-light .bella-memory-slug {
+  color: rgba(124, 45, 18, 0.55);
+}
+.bella-memory-saved-ok {
+  color: #34d399;
+}
+.bella.is-light .bella-memory-saved-ok {
+  color: #047857;
+}
+
+/* Raw HTML from marked — same look as ReactMarkdown + bella-md-* wrappers. */
+.bella-md-strong,
+.bella-memory-html-prose strong {
+  font-weight: 600;
+  color: inherit;
+}
+.bella-memory-empty-note {
+  margin: 0;
+  opacity: 0.75;
+  font-size: 14px;
+}
+.bella.is-light .bella-memory-empty-note {
+  color: rgba(124, 45, 18, 0.65);
+}
+.bella-memory-html-prose > p,
+.bella-memory-html-prose p {
+  margin: 0 0 0.55rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.bella-memory-html-prose > h1,
+.bella-memory-html-prose h1 {
+  margin: 0.55rem 0 0.45rem;
+  font-weight: 700;
+  line-height: 1.3;
+  font-size: 1.1rem;
+}
+.bella-memory-html-prose > h2,
+.bella-memory-html-prose h2 {
+  margin: 0.55rem 0 0.45rem;
+  font-weight: 700;
+  line-height: 1.3;
+  font-size: 1.02rem;
+}
+.bella-memory-html-prose > h3,
+.bella-memory-html-prose h3,
+.bella-memory-html-prose h4 {
+  margin: 0.55rem 0 0.45rem;
+  font-weight: 700;
+  line-height: 1.3;
+  font-size: 0.95rem;
+}
+.bella-memory-html-prose ul,
+.bella-memory-html-prose ol {
+  margin: 0 0 0.55rem;
+  padding-left: 1.3rem;
+}
+.bella-memory-html-prose li {
+  margin: 0.1rem 0;
+}
+.bella-memory-html-prose blockquote {
+  margin: 0 0 0.6rem;
+  padding: 0.45rem 0.65rem;
+  border-left: 3px solid rgba(251, 146, 60, 0.55);
+  background: rgba(251, 146, 60, 0.08);
+  border-radius: 0 8px 8px 0;
+}
+.bella-memory-html-prose hr {
+  margin: 0.7rem 0;
+  border: 0;
+  border-top: 1px solid rgba(251, 146, 60, 0.35);
+}
+.bella-memory-html-prose pre {
+  margin: 0 0 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  background: rgba(255, 255, 255, 0.55);
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.bella.is-dark .bella-memory-html-prose pre {
+  border-color: rgba(251, 146, 60, 0.3);
+  background: rgba(20, 16, 12, 0.62);
+}
+.bella-memory-html-prose code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 5px;
+  border: 1px solid rgba(251, 146, 60, 0.22);
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  word-break: break-word;
+}
+.bella.is-dark .bella-memory-html-prose code {
+  border-color: rgba(251, 146, 60, 0.3);
+  background: rgba(20, 16, 12, 0.58);
+}
+.bella-memory-html-prose pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.bella-memory-html-prose a {
+  color: rgba(124, 45, 18, 0.98);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.bella-memory-html-prose a:hover {
+  color: rgba(124, 45, 18, 1);
+}
+.bella.is-dark .bella-memory-html-prose a {
+  color: #fde68a;
+}
+.bella.is-dark .bella-memory-html-prose a:hover {
+  color: #fff3bf;
+}
+.bella-memory-html-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  margin: 0 0 0.6rem;
+  display: table;
+}
+.bella-memory-html-prose th,
+.bella-memory-html-prose td {
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+  vertical-align: top;
+}
+.bella-memory-html-prose th {
+  background: rgba(251, 146, 60, 0.18);
+  font-weight: 600;
+}
+.bella-memory-html-prose tbody tr:nth-child(odd) {
+  background: rgba(251, 146, 60, 0.06);
+}
+.bella-memory-html-prose tbody tr:hover {
+  background: rgba(251, 146, 60, 0.14);
+}
+.bella.is-dark .bella-memory-html-prose table {
+  border-color: rgba(251, 146, 60, 0.35);
+}
+.bella.is-dark .bella-memory-html-prose th,
+.bella.is-dark .bella-memory-html-prose td {
+  border-color: rgba(251, 146, 60, 0.28);
+}
+.bella.is-dark .bella-memory-html-prose th {
+  background: rgba(251, 146, 60, 0.22);
+}
+.bella.is-dark .bella-memory-html-prose tbody tr:nth-child(odd) {
+  background: rgba(251, 146, 60, 0.09);
+}
+.bella.is-dark .bella-memory-html-prose tbody tr:hover {
+  background: rgba(251, 146, 60, 0.18);
+}
+
+/* Full-height scroll for /bella/memory (read + rich edit). */
+.bella-memory-body-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
+}
+.bella-memory-body-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+.bella-memory-body-scroll::-webkit-scrollbar-thumb {
+  background: rgba(251, 146, 60, 0.45);
+  border-radius: 8px;
+  border: 2px solid rgba(24, 24, 27, 0.85);
+}
+.bella-memory-body-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+}
+.bella-memory-read-shell {
+  background: rgba(0, 0, 0, 0.18);
+}
+.bella.is-light .bella-memory-read-shell {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(251, 146, 60, 0.2);
+  border-radius: 10px;
+  margin: 8px;
+}
+.bella.is-light .bella-memory-body-scroll::-webkit-scrollbar-thumb {
+  background: rgba(251, 146, 60, 0.5);
+  border: 2px solid rgba(255, 250, 245, 0.95);
+}
+.bella.is-light .bella-memory-body-scroll::-webkit-scrollbar-track {
+  background: rgba(251, 146, 60, 0.12);
+}
+.bella-memory-ce[contenteditable='true']:focus {
+  box-shadow: inset 0 0 0 2px rgba(251, 191, 36, 0.35);
+}
+.bella.is-light .bella-memory-ce[contenteditable='true']:focus {
+  box-shadow: inset 0 0 0 2px rgba(234, 88, 12, 0.35);
+}
+
+.bella-header-auth-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 35;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 24px rgba(124, 45, 18, 0.18);
+}
+.bella.is-dark .bella-header-auth-panel {
+  background: rgba(30, 27, 25, 0.96);
+  border-color: rgba(251, 146, 60, 0.45);
+}
+
+.bella-toggle-btn {
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(255, 255, 255, 0.7);
+  color: #7c2d12;
+}
+.bella-toggle-btn:hover {
+  background: rgba(251, 146, 60, 0.15);
+  border-color: rgba(251, 146, 60, 0.6);
+}
+.bella-toggle-btn.is-active {
+  background: rgba(251, 146, 60, 0.2);
+  color: #7c2d12;
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.2);
+  border-color: rgba(251, 146, 60, 0.8);
+}
+/* Compact variant for inline On/Off toggles (e.g. search policy rows). */
+.bella-toggle-btn.bella-toggle-btn-compact {
+  padding: 4px 12px;
+  min-height: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.bella-toggle-btn.bella-toggle-btn-compact.is-active {
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.22);
+}
+.bella-label {
+  font-size: 12px;
+  color: rgba(124, 45, 18, 0.7);
+  margin-bottom: 6px;
+  display: block;
+}
+.bella-kv {
+  font-size: 0.95rem;
+  color: #7c2d12;
+}
+.bella-kv code,
+.bella-kv .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+.bella-inline-link {
+  font-size: 11px;
+  color: rgba(124, 45, 18, 0.95);
+  text-decoration: underline;
+}
+.bella-inline-link:hover {
+  color: rgba(124, 45, 18, 1);
+}
+
+.bella-copy-btn {
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  background: rgba(251, 146, 60, 0.12);
+  color: rgba(124, 45, 18, 0.95);
+  transition: border-color 0.16s ease, background 0.16s ease, transform 0.08s ease;
+}
+.bella-copy-btn:hover {
+  border-color: rgba(251, 146, 60, 0.65);
+  background: rgba(251, 146, 60, 0.2);
+}
+.bella-copy-btn:active {
+  transform: scale(0.98);
+}
+
+.bella-md {
+  font-size: 14px;
+  line-height: 1.62;
+}
+.bella-md-h1,
+.bella-md-h2,
+.bella-md-h3 {
+  margin: 0.55rem 0 0.45rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.bella-md-h1 { font-size: 1.1rem; }
+.bella-md-h2 { font-size: 1.02rem; }
+.bella-md-h3 { font-size: 0.95rem; }
+.bella-md-p {
+  margin: 0 0 0.55rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.bella-md-ul,
+.bella-md-ol {
+  margin: 0 0 0.55rem;
+  padding-left: 1.3rem;
+}
+.bella-md-li {
+  margin: 0.1rem 0;
+}
+.bella-md-blockquote {
+  margin: 0 0 0.6rem;
+  padding: 0.45rem 0.65rem;
+  border-left: 3px solid rgba(251, 146, 60, 0.55);
+  background: rgba(251, 146, 60, 0.08);
+  border-radius: 0 8px 8px 0;
+}
+.bella-md-blockquote > :last-child {
+  margin-bottom: 0;
+}
+.bella-md-hr {
+  margin: 0.7rem 0;
+  border: 0;
+  border-top: 1px solid rgba(251, 146, 60, 0.35);
+}
+.bella-md-h1 + .bella-md-hr,
+.bella-md-h2 + .bella-md-hr,
+.bella-md-h3 + .bella-md-hr {
+  margin-top: 0.35rem;
+}
+.bella-md-hr + .bella-md-h1,
+.bella-md-hr + .bella-md-h2,
+.bella-md-hr + .bella-md-h3 {
+  margin-top: 0.45rem;
+}
+.bella-md-pre {
+  margin: 0 0 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  background: rgba(255, 255, 255, 0.55);
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.bella-md-pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.bella-md-code {
+  padding: 0.1rem 0.35rem;
+  border-radius: 5px;
+  border: 1px solid rgba(251, 146, 60, 0.22);
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  word-break: break-word;
+}
+.bella-md-link {
+  color: rgba(124, 45, 18, 0.98);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.bella-md-link:hover {
+  color: rgba(124, 45, 18, 1);
+}
+.bella-md-table-wrap {
+  margin: 0 0 0.6rem;
+  overflow-x: auto;
+}
+.bella-md-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+}
+.bella-md-th,
+.bella-md-td {
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  padding: 0.35rem 0.45rem;
+  text-align: left;
+  vertical-align: top;
+}
+.bella-md-th {
+  background: rgba(251, 146, 60, 0.18);
+  font-weight: 600;
+}
+.bella-md-table tbody tr:nth-child(odd) {
+  background: rgba(251, 146, 60, 0.06);
+}
+.bella-md-table tbody tr:hover {
+  background: rgba(251, 146, 60, 0.14);
+}
+
+.bella-skill-list-scroll {
+  max-height: 13rem;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.bella-skill-list-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bella-skill-list-scroll::-webkit-scrollbar-thumb {
+  background: rgba(251, 146, 60, 0.5);
+  border-radius: 9999px;
+}
+
+.bella-skill-list-scroll::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 9999px;
+}
+.bella-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #fb923c; /* orange-400 */
+}
+.bella-progress-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: rgba(100, 116, 139, 0.25); /* slate-400/25 */
+  overflow: hidden;
+}
+.bella-progress-bar {
+  height: 100%;
+  background: #f59e0b; /* amber-500 */
+}
+
+@media (prefers-color-scheme: dark) {
+  .bella-modal {
+    background: rgba(23, 18, 14, 0.95);
+    border: 1px solid rgba(71, 85, 105, 0.35);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+  .bella-modal-title {
+    color: #fde68a;
+  }
+  .bella-modal-close {
+    background: rgba(251, 146, 60, 0.12);
+    color: #fde68a;
+    border-color: rgba(251, 146, 60, 0.35);
+  }
+  .bella-toggle-btn {
+    background: rgba(34, 27, 21, 0.6);
+    color: #fde68a;
+    border-color: rgba(71, 85, 105, 0.35);
+  }
+  .bella-toggle-btn:hover {
+    background: rgba(251, 146, 60, 0.18);
+    border-color: rgba(251, 146, 60, 0.6);
+  }
+  .bella-toggle-btn.is-active {
+    background: rgba(251, 146, 60, 0.22);
+    color: #fde68a;
+    border-color: rgba(251, 146, 60, 0.8);
+    box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.18);
+  }
+  .bella-toggle-btn.bella-toggle-btn-compact.is-active {
+    box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.2);
+  }
+  .bella-label {
+    color: rgba(253, 230, 138, 0.75);
+  }
+  .bella-kv {
+    color: #fde68a;
+  }
+  .bella-inline-link {
+    color: #fde68a;
+  }
+  .bella-inline-link:hover {
+    color: #fff3bf;
+  }
+  .bella-copy-btn {
+    border-color: rgba(251, 146, 60, 0.45);
+    background: rgba(251, 146, 60, 0.16);
+    color: #fde68a;
+  }
+  .bella-copy-btn:hover {
+    border-color: rgba(251, 146, 60, 0.8);
+    background: rgba(251, 146, 60, 0.24);
+  }
+  .bella-md-pre {
+    border-color: rgba(251, 146, 60, 0.3);
+    background: rgba(20, 16, 12, 0.62);
+  }
+  .bella-md-code {
+    border-color: rgba(251, 146, 60, 0.3);
+    background: rgba(20, 16, 12, 0.58);
+  }
+  .bella-md-link {
+    color: #fde68a;
+  }
+  .bella-md-link:hover {
+    color: #fff3bf;
+  }
+  .bella-md-blockquote {
+    border-left-color: rgba(251, 146, 60, 0.7);
+    background: rgba(251, 146, 60, 0.12);
+  }
+  .bella-md-hr {
+    border-top-color: rgba(251, 146, 60, 0.45);
+  }
+  .bella-md-table {
+    border-color: rgba(251, 146, 60, 0.35);
+  }
+  .bella-md-th,
+  .bella-md-td {
+    border-color: rgba(251, 146, 60, 0.28);
+  }
+  .bella-md-th {
+    background: rgba(251, 146, 60, 0.22);
+  }
+  .bella-md-table tbody tr:nth-child(odd) {
+    background: rgba(251, 146, 60, 0.09);
+  }
+  .bella-md-table tbody tr:hover {
+    background: rgba(251, 146, 60, 0.18);
+  }
+  .bella-dot {
+    background: #fbbf24; /* amber-400 */
+  }
+  .bella-progress-track {
+    background: rgba(100, 116, 139, 0.35);
+  }
+  .bella-progress-bar {
+    background: #f59e0b; /* amber-500 */
+  }
+
+  .bella-skill-list-scroll::-webkit-scrollbar-thumb {
+    background: rgba(251, 191, 36, 0.55);
+  }
+
+  .bella-skill-list-scroll::-webkit-scrollbar-track {
+    background: rgba(71, 85, 105, 0.35);
+  }
+}

@@ -1,0 +1,28 @@
+---
+description: Enforce project coding-standard.md before implementation
+alwaysApply: true
+---
+
+# Coding Standard Enforcement
+
+Before making code changes, read and follow `coding-standard.md`.
+
+Must enforce:
+
+- Skill-first for file/document tasks (`pdf`, `docx`, `pptx`, `xlsx`, `canvas-design`, `frontend-design`).
+- Do not use `exec`/shell as the primary file-processing path for uploaded file handling.
+- Use multi-workspace path compatibility for OpenClaw workspace reads/writes and output detection.
+- Keep flows observable with debug events and exportable diagnostics.
+- Never write or modify `.env` / `.env.*` files directly; provide manual instructions only.
+- Keep this rule file synchronized with `coding-standard.md` in every related change.
+- Keep `alwaysApply: true` enabled to enforce this rule continuously.
+- OpenClaw docs naming: use `OPENCLAW_*`; do not introduce new `CLAWRA_*` or `LOBSTERAI_*` setup docs.
+- Setup docs must follow "one entry + per-skill docs": `OPENCLAW_SETUP.md`, `OPENCLAW_SKILLS_SETUP.md`, and `OPENCLAW_SKILL_<SKILL>_SETUP.md`.
+- For new OpenClaw skills, `<SKILL>` must equal the OpenClaw skill id string (`~/.openclaw/skills/<id>` and `skills.entries.<id>`)—not marketing titles with spaces/punctuation.
+- If `<id>` contains spaces/symbols, normalize only the filename (e.g. underscores) but repeat the exact `<id>` inside the doc body for config parity.
+- External skills (ClawHub/upstream repos) need `OPENCLAW_SKILL_<SKILL>_SETUP.md` plus an index entry in `OPENCLAW_SKILLS_SETUP.md`.
+- Each setup doc must declare scope boundaries to avoid duplicate/overlapping instructions.
+- Skill setup docs should follow a consistent template: scenario, prerequisites, installation, `openclaw.json`, verification, troubleshooting.
+- For upstream attribution (e.g. LobsterAI), keep it as source note only, not as primary project naming.
+
+If a requested implementation conflicts with `coding-standard.md`, explain the conflict and propose a compliant approach.

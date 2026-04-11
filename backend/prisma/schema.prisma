@@ -1,0 +1,44 @@
+// Prisma schema — Bella auth + settings (PostgreSQL, shared DB with gbrain).
+// Run: `DATABASE_URL=postgresql://... npx prisma migrate deploy`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model BellaUser {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  sessions BellaSession[]
+  settings BellaUserSettings?
+
+  @@map("bella_users")
+}
+
+model BellaSession {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      BellaUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tokenHash])
+  @@map("bella_sessions")
+}
+
+model BellaUserSettings {
+  userId                 String  @id @map("user_id")
+  user                   BellaUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companionMemoryEnabled Boolean @default(false) @map("companion_memory_enabled")
+  autoLearnEnabled       Boolean @default(true) @map("auto_learn_enabled")
+
+  @@map("bella_user_settings")
+}

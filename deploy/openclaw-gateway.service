@@ -1,0 +1,35 @@
+[Unit]
+Description=OpenClaw Gateway (loopback only, non-root)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# 生产推荐：创建一个专用低权限用户（如 openclaw），并把它的 HOME 固定到 /home/openclaw
+User=openclaw
+Group=openclaw
+
+# 确保 openclaw 读到它自己的 /home/openclaw/.openclaw/openclaw.json 与 exec-approvals.json
+Environment=HOME=/home/openclaw
+Environment=USER=openclaw
+
+# 若 openclaw 不在默认 PATH，可在这里补充
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+
+# Gateway 必须使用 loopback bind + token auth（在 openclaw.json 里配置）
+ExecStart=/usr/bin/openclaw gateway --port 18789
+ExecStop=/usr/bin/openclaw gateway stop
+
+Restart=on-failure
+RestartSec=2
+
+# 基础加固（按需调整；若 skills 需要写 workspace，保持 read-write）
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target
+

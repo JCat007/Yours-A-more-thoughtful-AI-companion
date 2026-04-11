@@ -1,0 +1,164 @@
+{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "minimax-cn": {
+        "baseUrl": "https://api.minimaxi.com/anthropic",
+        "apiKey": "${MINIMAX_API_KEY}",
+        "api": "anthropic-messages",
+        "models": [
+          {
+            "id": "MiniMax-M2.7",
+            "name": "MiniMax M2.7 (China)",
+            "reasoning": false,
+            "input": ["text"],
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
+      },
+      "minimax-global": {
+        "baseUrl": "https://api.minimax.io/anthropic",
+        "apiKey": "${MINIMAX_API_KEY}",
+        "api": "anthropic-messages",
+        "models": [
+          {
+            "id": "MiniMax-M2.7",
+            "name": "MiniMax M2.7 (Global)",
+            "reasoning": false,
+            "input": ["text"],
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
+      },
+      "gemini": {
+        "baseUrl": "${GEMINI_BASE_URL}",
+        "apiKey": "${GEMINI_API_KEY}",
+        "api": "google-generative-ai",
+        "models": [
+          {
+            "id": "gemini-1.5-pro",
+            "name": "Gemini 1.5 Pro",
+            "reasoning": false,
+            "input": ["text"],
+            "contextWindow": 1000000,
+            "maxTokens": 8192
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "REPLACE_WORKSPACE",
+      "model": { "primary": "minimax-cn/MiniMax-M2.7" },
+      "compaction": { "mode": "safeguard" },
+      "maxConcurrent": 4,
+      "subagents": { "maxConcurrent": 8 }
+    },
+    "list": [
+      {
+        "id": "main-china",
+        "model": {
+          "primary": "minimax-cn/MiniMax-M2.7"
+        }
+      },
+      {
+        "id": "main-world",
+        "model": {
+          "primary": "openai-codex/gpt-5.3-codex",
+          "fallbacks": ["minimax-global/MiniMax-M2.7"]
+        }
+      }
+    ]
+  },
+  "env": {
+    "MINIMAX_API_KEY": "REPLACE_MINIMAX_KEY",
+    "GEMINI_API_KEY": "REPLACE_GEMINI_KEY",
+    "GEMINI_BASE_URL": "https://generativelanguage.googleapis.com",
+    "DOUBAO_API_KEY": "REPLACE_DOUBAO_KEY",
+    "PYTHON_SKILLS_VENV": "$HOME/.openclaw/venvs/python-skills"
+  },
+  "skills": {
+    "entries": {
+      "web-to-markdown": {
+        "enabled": true,
+        "env": {
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT"
+        }
+      },
+      "weather": {
+        "enabled": true,
+        "env": {
+          "WEATHER_MODE": "china",
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT"
+        }
+      },
+      "pdf": {
+        "enabled": true,
+        "env": {
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT",
+          "PYTHON_SKILLS_VENV": "$HOME/.openclaw/venvs/python-skills"
+        }
+      },
+      "canvas-design": {
+        "enabled": true,
+        "env": {
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT",
+          "PYTHON_SKILLS_VENV": "$HOME/.openclaw/venvs/python-skills"
+        }
+      },
+      "docx": {
+        "enabled": true,
+        "env": {
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT",
+          "PYTHON_SKILLS_VENV": "$HOME/.openclaw/venvs/python-skills"
+        }
+      },
+      "frontend-design": {
+        "enabled": true,
+        "env": { "SKILLS_ROOT": "REPLACE_SKILLS_ROOT" }
+      },
+      "pptx": {
+        "enabled": true,
+        "env": {
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT",
+          "PYTHON_SKILLS_VENV": "$HOME/.openclaw/venvs/python-skills"
+        }
+      },
+      "xlsx": {
+        "enabled": true,
+        "env": {
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT",
+          "PYTHON_SKILLS_VENV": "$HOME/.openclaw/venvs/python-skills"
+        }
+      },
+      "markitdown": {
+        "enabled": true,
+        "env": {
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT",
+          "PYTHON_SKILLS_VENV": "$HOME/.openclaw/venvs/python-skills"
+        }
+      },
+      "markitdown-ingest": {
+        "enabled": true,
+        "env": {
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT",
+          "PYTHON_SKILLS_VENV": "$HOME/.openclaw/venvs/python-skills"
+        }
+      },
+      "markitdown-multimodal": {
+        "enabled": true,
+        "env": {
+          "SKILLS_ROOT": "REPLACE_SKILLS_ROOT",
+          "PYTHON_SKILLS_VENV": "$HOME/.openclaw/venvs/python-skills"
+        }
+      }
+    }
+  },
+  "browser": {
+    "enabled": true,
+    "defaultProfile": "openclaw"
+  }
+}

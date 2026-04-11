@@ -1,0 +1,12 @@
+{
+  "name": "yours",
+  "private": true,
+  "description": "Bella assistant monorepo (backend + frontend)",
+  "scripts": {
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "docker:db": "docker compose --env-file backend/.env up -d",
+    "docker:db:down": "docker compose --env-file backend/.env down"
+  }
+}
