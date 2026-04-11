@@ -1,55 +1,57 @@
 # Yours
 
+Chinese documentation is available in [`READMEcn.md`](READMEcn.md) at the repository root.
+
 ## Everlasting and Yours
 
-**Everlasting** is an effort to give people a form of digital persistence in an AI-native world. The long-term vision is to combine video, images, voice, and (memory) data so digital beings can feel, carry personality and hobbies, and keep growing over time. Through Everlasting, people can meaningfully bring back those who are gone and the scenes that matter, so precious moments can live on in a cyber world.
+**Everlasting** is an experiment in helping people achieve a form of digital persistence in an AI-native world. The long-term vision is to combine video, images, voice, and memory-oriented data so digital beings can feel emotion, carry personality and hobbies, and keep growing over time. Through Everlasting, people can meaningfully bring back those who are gone and the scenes that matter, so precious moments can live on in a digital world.
 
-**Yours** is the first-phase product of Everlasting. She is an AI companion designed to grow with you and stay attuned to you (today, only the **Bella** persona is available). Because this is an initial public release, the codebase prioritizes **functional completeness**; product polish and visual design will keep improving. A detailed roadmap and milestone plan will be published over time.
+**Yours** is the first-phase product of Everlasting. She is an AI companion designed to grow with you and stay attuned to you (today, only the **Bella** persona is available). Because the project is in its first public release, the codebase prioritizes **functional reliability**; product experience and visual design will continue to improve. A detailed roadmap and milestone plan will be published over time.
 
-\---
+---
 
-## Architecture
+## Architecture overview
 
-Yours is a monorepo: **React + Vite** frontend, **Node** backend, **PostgreSQL** (with **pgvector** when you enable companion memory), and an optional **OpenClaw** gateway for tool-heavy work. Chat is handled as **intent first**, **execution second**, **persona last**, not as a single flat LLM call.
+Yours is a **monorepo**: a **React + Vite** frontend, a **Node** backend, **PostgreSQL** by default (with **pgvector** when companion memory is enabled), and an optional **OpenClaw** gateway for tool-heavy work. The conversation pipeline is organized as **intent first**, **execution in the middle**, and **persona last**—not as a single flat LLM call.
 
 ### Layers and responsibilities
 
-|Layer|Role|Typical code|
-|-|-|-|
-|**Intent (router) LLM**|Classifies each turn as casual chat, image-oriented, or task-oriented; decides whether OpenClaw should run. Can use LLM only, rules only, or **hybrid** (LLM with rule fallback). Uploads force the task path and OpenClaw.|`bellaIntentClassifier.ts`, routing inside `assistant.ts`|
-|**Executor**|Serves light `chat\\\_only` turns **synchronously** for lower latency. For files, images, video, or multi-step work, starts an **OpenClaw job** (SSE progress + polling). Talks to the gateway over an **OpenAI-compatible** HTTP API.|`assistant.ts`, `routes/assistant.ts`|
-|**Outer (persona) LLM**|Does **not** show raw executor logs to the user. Rewrites execution output into Bella’s voice, keeps facts, and softens failures. System persona + SOUL body drive tone.|`bellaComposer.ts`, `bellaOuterLlm.ts`, `bellaPersona.ts`|
-|**OpenClaw**|Optional **executor**, not vendored in this repo. Runs agents, tools, and **skills** (documents, media, web extraction, etc.) when the router sends work there. Configured via gateway URL, token, and agent id env vars.|External CLI + gateway; see `docs/OPENCLAW\\\_\\\*.md`|
-|**gbrain + Postgres**|**Optional long-term companion memory**. Uses the **same** `DATABASE\\\_URL` as Bella; the backend calls the **gbrain** CLI for retrieval/writes when enabled. Retrieved snippets are injected as context for generation (and OpenClaw turns get **write-scope** hints so memory stays per-user). This is a **memory subsystem**, not a replacement for the intent or persona LLM.|`gbrainCli.ts`, `companionChatBridge.ts`, `docs/COMPANION\\\_AUTH\\\_GBRAIN.md`|
+| Layer | Role | Typical code locations |
+|-------|------|------------------------|
+| **Intent (router) LLM** | Classifies each turn as casual chat, image-oriented, task-oriented, and so on; decides whether to use OpenClaw. Supports LLM-only, rules-only, or **hybrid** (fall back to rules when the LLM is low-confidence). Uploads force the task path and OpenClaw. | `bellaIntentClassifier.ts`, routing inside `assistant.ts` |
+| **Execution layer** | Light `chat_only` paths can use a **synchronous** direct model call for lower latency. Files, images, video, or multi-step work starts an **OpenClaw job** (SSE progress and polled results). Communicates with the gateway over an **OpenAI-compatible** HTTP API. | `assistant.ts`, `routes/assistant.ts` |
+| **Outer (persona) LLM** | Does **not** surface raw execution logs to the user. Rewrites execution output in Bella’s voice while preserving facts, and handles failures gently. System persona and SOUL body jointly constrain tone. | `bellaComposer.ts`, `bellaOuterLlm.ts`, `bellaPersona.ts` |
+| **OpenClaw** | Optional **executor**, not vendored in this repository. After the router dispatches work to the gateway, agents, tools, and **skills** (documents, media, web extraction, and more) carry it out. Configure via gateway URL, token, agent id, and related environment variables. | External CLI and gateway; see `docs/OPENCLAW_*.md` |
+| **gbrain and Postgres** | **Optional long-term companion memory**. Shares **`DATABASE_URL`** with Bella; when enabled, the backend invokes the **gbrain** CLI for retrieval and writes. Retrieved snippets are injected as generation context (OpenClaw paths also receive **write-scope** hints to avoid cross-user leakage). This is a **memory subsystem**; it does not replace the intent or persona LLMs. | `gbrainCli.ts`, `companionChatBridge.ts`, `docs/COMPANION_AUTH_GBRAIN.md` |
 
-**Session state** (short-term context, last intent) lives in `bellaState.ts` and is separate from gbrain’s longer-horizon store.
+**Session state** (short-term context, previous-turn intent, and related fields) is maintained in `bellaState.ts`, independently of gbrain’s longer-horizon storage.
 
 ### End-to-end chat flow (`POST /api/assistant/chat`)
 
-1. Accept message, history, uploads, and mode.
-2. Load short-term session memory.
-3. Run routing → `intent`, `confidence`, `shouldUseOpenClaw`.
-4. Branch: synchronous text vs OpenClaw job (with downloads / media when applicable).
-5. If companion memory is on, merge **gbrain** retrieval into the context used for this turn.
-6. Run the **outer persona LLM** for the final user-visible reply.
-7. Return `reply` / `imageUrl` / `videoUrl` / `downloads` and/or a `jobId`.
+1. Accept the message, history, uploads, and mode.  
+2. Load short-term session memory.  
+3. Run routing to obtain `intent`, `confidence`, and `shouldUseOpenClaw`.  
+4. Branch: synchronous text generation, or an OpenClaw job (including downloads and media where applicable).  
+5. If companion memory is enabled, merge **gbrain** retrieval into the context used for this turn’s generation.  
+6. Invoke the **outer persona LLM** to produce the final user-visible reply.  
+7. Return `reply`, `imageUrl`, `videoUrl`, and `downloads`; asynchronous job flows may also return `jobId`.
 
 ### Diagram
 
 ```mermaid
 flowchart TB
-  subgraph client\\\["Browser / client"]
-    UI\\\[Yours frontend]
+  subgraph client["Browser / client"]
+    UI[Yours frontend]
   end
 
-  subgraph backend\\\["Node backend"]
-    API\\\["/api/assistant/chat"]
-    Intent\\\["Intent router LLM\\\\n(+ rules, hybrid)"]
-    Exec{"Executor branch"}
-    Sync\\\["Direct LLM completion\\\\n(light chat)"]
-    OCJob\\\["OpenClaw job\\\\n(SSE + results)"]
-    Mem\\\["gbrain CLI\\\\n(optional retrieval / writes)"]
-    Outer\\\["Outer persona LLM\\\\n(Bella voice)"]
+  subgraph backend["Node backend"]
+    API["/api/assistant/chat"]
+    Intent["Intent router LLM\n(rules, hybrid)"]
+    Exec{"Execution branch"}
+    Sync["Direct LLM completion\n(light chat)"]
+    OCJob["OpenClaw job\n(SSE + results)"]
+    Mem["gbrain CLI\n(optional retrieval / writes)"]
+    Outer["Outer persona LLM\n(Bella voice)"]
     API --> Intent
     Intent --> Exec
     Exec --> Sync
@@ -61,12 +63,12 @@ flowchart TB
     Outer --> UI
   end
 
-  subgraph data\\\["Data"]
-    PG\\\[(PostgreSQL\\\\n+ pgvector)]
+  subgraph data["Data"]
+    PG[(PostgreSQL\n+ pgvector)]
   end
 
-  subgraph external\\\["External processes"]
-    GW\\\[OpenClaw Gateway\\\\nOpenAI-compatible API]
+  subgraph external["External processes"]
+    GW[OpenClaw Gateway\nOpenAI-compatible API]
   end
 
   UI --> API
@@ -75,64 +77,66 @@ flowchart TB
   Mem <--> PG
 ```
 
-Deeper implementation notes: [`docs/ARCHITECTURE\\\_AND\\\_REFACTOR.md`](docs/ARCHITECTURE_AND_REFACTOR.md).
+For deeper implementation notes, see [`docs/ARCHITECTURE_AND_REFACTOR.md`](docs/ARCHITECTURE_AND_REFACTOR.md).
 
-\---
+---
 
 ## Quick install
 
-**Prerequisites:** Node.js + npm, Docker (for the default local database), Git.
+**Prerequisites:** Node.js and npm, Docker (default local database), Git.
 
-1. **Clone** this repository and open a shell at the repo root.
+1. **Clone** this repository and open a terminal at the repository root.
+
 2. **Install dependencies** (once per clone):
 
-```bash
-   cd backend \\\&\\\& npm install
-   cd ../frontend \\\&\\\& npm install
+   ```bash
+   cd backend && npm install
+   cd ../frontend && npm install
    ```
 
-3. **Environment — backend**
+3. **Backend environment**
 
-```bash
+   ```bash
    cp backend/.env.example backend/.env
    ```
 
-Set at least **`POSTGRES\\\_PASSWORD`** to a long random secret. Leave **`DATABASE\\\_URL`** empty unless you use an external database; the app can build the URL from `POSTGRES\\\_\\\*` fields.
+   Set at least **`POSTGRES_PASSWORD`** to a long random secret. Unless you use an external database, you can **omit** **`DATABASE_URL`**; the application will build the connection string from `POSTGRES_*`.
 
-4. **Database (Docker, from repo root)**
+4. **Database (Docker, from repository root)**
 
-```bash
+   ```bash
    npm run docker:db
    ```
 
-5. **Prisma (from `backend/`, once before first serious run)**
+5. **Prisma (from `backend/`, before your first serious run)**
 
-```bash
+   ```bash
    cd backend
    npm run prisma:deploy
    npx prisma generate
    ```
 
-6. **Frontend env (optional)**  
-Copy any `VITE\\\_\\\*` variables you need into `frontend/.env` or `frontend/.env.local` (see repo root `.env.example` for names).
+6. **Frontend environment (optional)**  
+   Write the `VITE_*` variables you need into `frontend/.env` or `frontend/.env.local` (names are listed in the repository root `.env.example`).
 
-   **Do not** use a plain `postgres:16` image if you plan **gbrain**—you need **pgvector** (this repo’s Compose uses a pgvector-capable image). Details: [`docs/COMPANION\\\_AUTH\\\_GBRAIN.md`](docs/COMPANION_AUTH_GBRAIN.md).
+If you plan to use **gbrain**, **do not** rely on the stock `postgres:16` image without vector support; you need **pgvector** (this repository’s Compose file uses a pgvector-capable image). Details: [`docs/COMPANION_AUTH_GBRAIN.md`](docs/COMPANION_AUTH_GBRAIN.md).
 
-   \---
+---
 
-   ## Getting started
+## Getting started
 
-7. **Start Postgres** (if not already running): `npm run docker:db` from the repo root.
-8. **Backend** (terminal A):
+1. **Start Postgres** (if it is not already running): from the repository root, run `npm run docker:db`.
+
+2. **Backend** (terminal A):
 
    ```bash
    cd backend
    npm run dev
    ```
 
-   Check **http://localhost:3001/health** → JSON with `"status":"ok"`.
+   Open **http://localhost:3001/health** in a browser; you should see JSON including `"status":"ok"`.
 
-9. **Frontend** (terminal B):
+3. **Frontend** (terminal B):
 
    ```bash
    cd frontend
@@ -141,118 +145,115 @@ Copy any `VITE\\\_\\\*` variables you need into `frontend/.env` or `frontend/.en
 
    Open **http://localhost:5173** for the Bella UI.
 
-10. **First user**  
-When the user table is empty, you can register the first account. If users already exist and you need another signup, set **`BELLA\\\_ALLOW\\\_REGISTER=1`** in `backend/.env` (see companion doc).
-11. **Optional: OpenClaw + MiniMax (example stack)**  
-Follow [`docs/HANDS\\\_ON\\\_GUIDE.md`](docs/HANDS_ON_GUIDE.md) (SOUL file, gateway, keys).
-12. **Optional: gbrain companion memory**  
-After Postgres + Prisma work, run `gbrain init` against the same database, set **`GBRAIN\\\_ENABLED=1`**, restart the backend. Full walkthrough: [`docs/COMPANION\\\_AUTH\\\_GBRAIN.md`](docs/COMPANION_AUTH_GBRAIN.md).
+4. **First account**  
+   When the user table is empty, you can register the first account. If users already exist and you still need another signup, set **`BELLA_ALLOW_REGISTER=1`** in `backend/.env` (see the companion memory documentation).
 
-    **Windows + WSL one-click dev:** `scripts/dev-start.bat` can start the gateway, backend, frontend, and optional Star Office when those trees exist. Copy `scripts/dev-wsl.config.example.bat` → `scripts/dev-wsl.config.bat` if you need overrides. Prisma migrate/generate is still your responsibility before relying on DB features.
+5. **Optional: OpenClaw and MiniMax (example stack)**  
+   Follow [`docs/HANDS_ON_GUIDE.md`](docs/HANDS_ON_GUIDE.md) to configure SOUL, the gateway, and API keys.
 
-    **Production build** (repo root):
+6. **Optional: gbrain companion memory**  
+   After Postgres and Prisma are in place, run `gbrain init` against the same database, set **`GBRAIN_ENABLED=1`**, and restart the backend. Full steps: [`docs/COMPANION_AUTH_GBRAIN.md`](docs/COMPANION_AUTH_GBRAIN.md).
 
-    ```bash
+**Windows with WSL one-click development:** `scripts/dev-start.bat` can start the gateway, backend, frontend, and optional Star Office when the corresponding directories exist. If auto-detection fails, copy `scripts/dev-wsl.config.example.bat` to `scripts/dev-wsl.config.bat` and adjust parameters. You must still run Prisma migrate and generate yourself before relying on database-backed features.
+
+**Production build** (repository root):
+
+```bash
 npm run build
+```
 
-    npm run build
+This runs the backend `tsc` step, then the frontend `tsc && vite build`. You can also run `npm run build:backend` or `npm run build:frontend` separately.
 
-    ```
+---
 
-   Runs `backend` (`tsc`) then `frontend` (`tsc \\\&\\\& vite build`). Use `npm run build:backend` or `npm run build:frontend` separately if needed.
+## Documentation index
 
-   \\---
+The following documents are intended for publication alongside the GitHub repository. The tables list **file names** and **what each document covers**.
 
-   ## Documentation
+### Core setup and operations
 
-   The following docs are intended for publication alongside the GitHub repository. Each line is \*\*file name\*\* → \*\*what it covers\*\*.
-
-   ### Core setup and operations
-
-|Document|Contents|
-|-|-|
-|\[`docs/LOCAL\\\_SETUP.md`](docs/LOCAL\_SETUP.md)|Minimal local run: only `POSTGRES\\\_PASSWORD`, Docker DB, Prisma, then dev servers.|
-|\[`docs/COMPANION\\\_AUTH\\\_GBRAIN.md`](docs/COMPANION\_AUTH\_GBRAIN.md)|Self-hosting: Postgres/pgvector, Bun, \*\*gbrain\*\* init, env vars, Prisma, login, companion memory toggles, ops password reset.|
-|\[`docs/ENVIRONMENT\\\_SETUP.md`](docs/ENVIRONMENT\_SETUP.md)|Env file rules, root vs `VITE\\\_\\\*`, cloud secrets, CI notes.|
-|\[`NODE\\\_AND\\\_LOCALHOST.md`](NODE\_AND\_LOCALHOST.md)|Node sanity checks and fixing localhost / port access issues.|
-|\[`docs/WSL\\\_MIGRATION.md`](docs/WSL\_MIGRATION.md)|Notes for working under WSL.|
-|\[`docs/GITHUB\\\_RELEASE\\\_CHECKLIST.md`](docs/GITHUB\_RELEASE\_CHECKLIST.md)|Pre-public GitHub checks.|
+| Document | Contents |
+|----------|----------|
+| [`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md) | Minimal local run: only `POSTGRES_PASSWORD`, Docker database, Prisma, and dev servers. |
+| [`docs/COMPANION_AUTH_GBRAIN.md`](docs/COMPANION_AUTH_GBRAIN.md) | Self-hosted stack: Postgres and pgvector, Bun, gbrain initialization, environment variables, Prisma, login, companion memory toggles, operational password reset. |
+| [`docs/ENVIRONMENT_SETUP.md`](docs/ENVIRONMENT_SETUP.md) | Environment file conventions, repository root versus `VITE_*`, cloud secrets, CI guidance. |
+| [`NODE_AND_LOCALHOST.md`](NODE_AND_LOCALHOST.md) | Node sanity checks and troubleshooting localhost and port access. |
+| [`docs/WSL_MIGRATION.md`](docs/WSL_MIGRATION.md) | Guidance for working under WSL. |
+| [`docs/GITHUB_RELEASE_CHECKLIST.md`](docs/GITHUB_RELEASE_CHECKLIST.md) | Pre-public release checklist. |
 
 ### Architecture and product behavior
 
-|Document|Contents|
-|-|-|
-|\[`docs/ARCHITECTURE\\\_AND\\\_REFACTOR.md`](docs/ARCHITECTURE\_AND\_REFACTOR.md)|Current Bella stack: router, executor, persona; request flow; module map; future refactors.|
-|\[`docs/OPENCLAW\\\_DECISION\\\_FLOW.md`](docs/OPENCLAW\_DECISION\_FLOW.md)|OpenClaw output shapes, skills mapping, URL router vs main intent classifier, SOUL/gateway notes.|
-|\[`docs/BELLA\\\_CAPABILITIES\\\_AND\\\_SKILLS.md`](docs/BELLA\_CAPABILITIES\_AND\_SKILLS.md)|Bella capabilities and skill surface (high level).|
-|\[`docs/templates/Bella-SOUL.md`](docs/templates/Bella-SOUL.md)|Template SOUL markdown for OpenClaw workspace (`\\\~/.openclaw/workspace/SOUL.md`).|
+| Document | Contents |
+|----------|----------|
+| [`docs/ARCHITECTURE_AND_REFACTOR.md`](docs/ARCHITECTURE_AND_REFACTOR.md) | Current Bella stack: routing, execution, persona; request paths; module map; future refactor ideas. |
+| [`docs/OPENCLAW_DECISION_FLOW.md`](docs/OPENCLAW_DECISION_FLOW.md) | OpenClaw output shapes, skills mapping, URL routing versus the main intent classifier, SOUL and gateway notes. |
+| [`docs/BELLA_CAPABILITIES_AND_SKILLS.md`](docs/BELLA_CAPABILITIES_AND_SKILLS.md) | Bella capabilities and skills surface (overview). |
+| [`docs/templates/Bella-SOUL.md`](docs/templates/Bella-SOUL.md) | OpenClaw workspace SOUL template (copy to `~/.openclaw/workspace/SOUL.md`). |
 
 ### OpenClaw gateway and skills
 
-|Document|Contents|
-|-|-|
-|\[`docs/OPENCLAW\\\_SETUP.md`](docs/OPENCLAW\_SETUP.md)|Connect backend to OpenClaw Gateway; HTTP settings and `backend/.env` wiring.|
-|\[`docs/OPENCLAW\\\_SKILLS\\\_SETUP.md`](docs/OPENCLAW\_SKILLS\_SETUP.md)|Skills index and cross-skill setup pointers.|
-|\[`docs/OPENCLAW\\\_CHINA\\\_WORLD\\\_MODE.md`](docs/OPENCLAW\_CHINA\_WORLD\_MODE.md)|China vs world mode behavior for OpenClaw-related flows.|
-|\[`docs/SKILL\\\_CONVENTION\\\_CHINA\\\_WORLD.md`](docs/SKILL\_CONVENTION\_CHINA\_WORLD.md)|Conventions for skills that differ by region.|
-|\[`docs/OPENCLAW\\\_PYTHON\\\_VENV\\\_UNIFIED.md`](docs/OPENCLAW\_PYTHON\_VENV\_UNIFIED.md)|Unified Python venv layout for skills.|
-|\[`docs/OPENCLAW\\\_SANDBOX\\\_UPGRADE.md`](docs/OPENCLAW\_SANDBOX\_UPGRADE.md)|Sandboxing upgrades for OpenClaw.|
-|\[`docs/OPENCLAW\\\_WEB\\\_FETCH\\\_SSRF\\\_AND\\\_DNS.md`](docs/OPENCLAW\_WEB\_FETCH\_SSRF\_AND\_DNS.md)|Web fetch safety: SSRF and DNS considerations.|
-|\[`docs/WEATHER\\\_SKILL\\\_DIAGNOSTIC.md`](docs/WEATHER\_SKILL\_DIAGNOSTIC.md)|Troubleshooting the weather skill.|
+| Document | Contents |
+|----------|----------|
+| [`docs/OPENCLAW_SETUP.md`](docs/OPENCLAW_SETUP.md) | Backend integration with the OpenClaw gateway, HTTP settings, and `backend/.env` wiring. |
+| [`docs/OPENCLAW_SKILLS_SETUP.md`](docs/OPENCLAW_SKILLS_SETUP.md) | Skills index and cross-skill setup entry points. |
+| [`docs/OPENCLAW_CHINA_WORLD_MODE.md`](docs/OPENCLAW_CHINA_WORLD_MODE.md) | China-region versus world-region behavior for OpenClaw-related flows. |
+| [`docs/SKILL_CONVENTION_CHINA_WORLD.md`](docs/SKILL_CONVENTION_CHINA_WORLD.md) | Conventions for authoring skills that differ by region. |
+| [`docs/OPENCLAW_PYTHON_VENV_UNIFIED.md`](docs/OPENCLAW_PYTHON_VENV_UNIFIED.md) | Unified Python virtual environment layout for skills. |
+| [`docs/OPENCLAW_SANDBOX_UPGRADE.md`](docs/OPENCLAW_SANDBOX_UPGRADE.md) | OpenClaw sandbox upgrade notes. |
+| [`docs/OPENCLAW_WEB_FETCH_SSRF_AND_DNS.md`](docs/OPENCLAW_WEB_FETCH_SSRF_AND_DNS.md) | Web fetch safety: SSRF and DNS considerations. |
+| [`docs/WEATHER_SKILL_DIAGNOSTIC.md`](docs/WEATHER_SKILL_DIAGNOSTIC.md) | Weather skill troubleshooting. |
 
-\*\*Per-skill setup guides\*\*
+**Per-skill setup guides**
 
-|Document|Contents|
-|-|-|
-|\[`docs/OPENCLAW\\\_SKILL\\\_PDF\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_PDF\_SETUP.md)|PDF skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_DOCX\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_DOCX\_SETUP.md)|Word / DOCX skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_PPTX\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_PPTX\_SETUP.md)|PowerPoint skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_XLSX\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_XLSX\_SETUP.md)|Excel skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_CANVAS\\\_DESIGN\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_CANVAS\_DESIGN\_SETUP.md)|Canvas / visual design skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_FRONTEND\\\_DESIGN\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_FRONTEND\_DESIGN\_SETUP.md)|Frontend / landing skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_MEDIA\\\_IMAGE\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_MEDIA\_IMAGE\_SETUP.md)|Image generation skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_MEDIA\\\_VIDEO\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_MEDIA\_VIDEO\_SETUP.md)|Video generation skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_WEB\\\_TO\\\_MARKDOWN\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_WEB\_TO\_MARKDOWN\_SETUP.md)|Web-to-markdown skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_MARKITDOWN\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_MARKITDOWN\_SETUP.md)|MarkItDown base setup.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_MARKITDOWN\\\_INGEST\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_MARKITDOWN\_INGEST\_SETUP.md)|MarkItDown ingest path.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_MARKITDOWN\\\_MULTIMODAL\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_MARKITDOWN\_MULTIMODAL\_SETUP.md)|MarkItDown multimodal setup.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_TAOBAO\\\_SHOP\\\_PRICE\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_TAOBAO\_SHOP\_PRICE\_SETUP.md)|Taobao shop price skill.|
-|\[`docs/OPENCLAW\\\_SKILL\\\_CHINA\\\_E\\\_COMMERCE\\\_PRICE\\\_COMPARISON\\\_SKILLS\\\_SETUP.md`](docs/OPENCLAW\_SKILL\_CHINA\_E\_COMMERCE\_PRICE\_COMPARISON\_SKILLS\_SETUP.md)|China e-commerce price comparison skills.|
+| Document | Contents |
+|----------|----------|
+| [`docs/OPENCLAW_SKILL_PDF_SETUP.md`](docs/OPENCLAW_SKILL_PDF_SETUP.md) | PDF skill. |
+| [`docs/OPENCLAW_SKILL_DOCX_SETUP.md`](docs/OPENCLAW_SKILL_DOCX_SETUP.md) | Word and DOCX skill. |
+| [`docs/OPENCLAW_SKILL_PPTX_SETUP.md`](docs/OPENCLAW_SKILL_PPTX_SETUP.md) | PowerPoint skill. |
+| [`docs/OPENCLAW_SKILL_XLSX_SETUP.md`](docs/OPENCLAW_SKILL_XLSX_SETUP.md) | Excel skill. |
+| [`docs/OPENCLAW_SKILL_CANVAS_DESIGN_SETUP.md`](docs/OPENCLAW_SKILL_CANVAS_DESIGN_SETUP.md) | Canvas and visual design skill. |
+| [`docs/OPENCLAW_SKILL_FRONTEND_DESIGN_SETUP.md`](docs/OPENCLAW_SKILL_FRONTEND_DESIGN_SETUP.md) | Frontend and landing-page style skills. |
+| [`docs/OPENCLAW_SKILL_MEDIA_IMAGE_SETUP.md`](docs/OPENCLAW_SKILL_MEDIA_IMAGE_SETUP.md) | Image generation skill. |
+| [`docs/OPENCLAW_SKILL_MEDIA_VIDEO_SETUP.md`](docs/OPENCLAW_SKILL_MEDIA_VIDEO_SETUP.md) | Video generation skill. |
+| [`docs/OPENCLAW_SKILL_WEB_TO_MARKDOWN_SETUP.md`](docs/OPENCLAW_SKILL_WEB_TO_MARKDOWN_SETUP.md) | Web-to-Markdown skill. |
+| [`docs/OPENCLAW_SKILL_MARKITDOWN_SETUP.md`](docs/OPENCLAW_SKILL_MARKITDOWN_SETUP.md) | MarkItDown base installation. |
+| [`docs/OPENCLAW_SKILL_MARKITDOWN_INGEST_SETUP.md`](docs/OPENCLAW_SKILL_MARKITDOWN_INGEST_SETUP.md) | MarkItDown ingest path. |
+| [`docs/OPENCLAW_SKILL_MARKITDOWN_MULTIMODAL_SETUP.md`](docs/OPENCLAW_SKILL_MARKITDOWN_MULTIMODAL_SETUP.md) | MarkItDown multimodal installation. |
+| [`docs/OPENCLAW_SKILL_TAOBAO_SHOP_PRICE_SETUP.md`](docs/OPENCLAW_SKILL_TAOBAO_SHOP_PRICE_SETUP.md) | Taobao shop price comparison skill. |
+| [`docs/OPENCLAW_SKILL_CHINA_E_COMMERCE_PRICE_COMPARISON_SKILLS_SETUP.md`](docs/OPENCLAW_SKILL_CHINA_E_COMMERCE_PRICE_COMPARISON_SKILLS_SETUP.md) | China e-commerce price comparison skills. |
 
-### Providers, deploy, and extensions
+### Providers, deployment, and extensions
 
-|Document|Contents|
-|-|-|
-|\[`docs/BELLA\\\_MINIMAX\\\_SETUP.md`](docs/BELLA\_MINIMAX\_SETUP.md)|MiniMax provider configuration for Bella/OpenClaw.|
-|\[`docs/HANDS\\\_ON\\\_GUIDE.md`](docs/HANDS\_ON\_GUIDE.md)|Hands-on checklist: MiniMax key, SOUL, OpenClaw JSON, gateway, curl tests.|
-|\[`docs/DEPLOY\\\_AWS.md`](docs/DEPLOY\_AWS.md)|AWS EC2 + systemd + OpenClaw gateway style deploy.|
-|\[`docs/AWS\\\_APP\\\_RUNNER\\\_DEPLOY\\\_BELLA.md`](docs/AWS\_APP\_RUNNER\_DEPLOY\_BELLA.md)|AWS App Runner oriented deploy notes.|
-|\[`deploy/PUBLIC\\\_DEPLOY.md`](deploy/PUBLIC\_DEPLOY.md)|Recommended public shape: gateway on loopback, backend behind TLS, static frontend.|
-|\[`docs/STAR\\\_OFFICE\\\_DEPLOY\\\_AND\\\_INTEGRATION.md`](docs/STAR\_OFFICE\_DEPLOY\_AND\_INTEGRATION.md)|Star Office submodule deploy and integration.|
-|\[`docs/OPTIONAL\\\_SUBMODULES.md`](docs/OPTIONAL\_SUBMODULES.md)|Pattern for optional submodules (env flags, routes, frontend toggles).|
+| Document | Contents |
+|----------|----------|
+| [`docs/BELLA_MINIMAX_SETUP.md`](docs/BELLA_MINIMAX_SETUP.md) | MiniMax provider configuration for Bella and the OpenClaw side. |
+| [`docs/HANDS_ON_GUIDE.md`](docs/HANDS_ON_GUIDE.md) | Hands-on checklist: MiniMax keys, SOUL, OpenClaw JSON, gateway, curl self-tests. |
+| [`docs/DEPLOY_AWS.md`](docs/DEPLOY_AWS.md) | AWS EC2, systemd, and OpenClaw-gateway-style deployment. |
+| [`docs/AWS_APP_RUNNER_DEPLOY_BELLA.md`](docs/AWS_APP_RUNNER_DEPLOY_BELLA.md) | AWS App Runner oriented deployment. |
+| [`deploy/PUBLIC_DEPLOY.md`](deploy/PUBLIC_DEPLOY.md) | Recommended public topology: gateway on loopback only, backend behind TLS, static frontend hosting. |
+| [`docs/STAR_OFFICE_DEPLOY_AND_INTEGRATION.md`](docs/STAR_OFFICE_DEPLOY_AND_INTEGRATION.md) | Star Office submodule deployment and integration. |
+| [`docs/OPTIONAL_SUBMODULES.md`](docs/OPTIONAL_SUBMODULES.md) | Optional submodule pattern (environment flags, routes, frontend toggles). |
 
 ### Templates
 
-|Document|Contents|
-|-|-|
-|\[`docs/templates/skill-china-world-example.md`](docs/templates/skill-china-world-example.md)|Example skill doc for China/world split.|
+| Document | Contents |
+|----------|----------|
+| [`docs/templates/skill-china-world-example.md`](docs/templates/skill-china-world-example.md) | Example skill documentation for China versus world split. |
 
-\\---
+---
 
-## Main entry files (for contributors)
+## Main entry files (contributors)
 
-\* `backend/src/routes/assistant.ts` — orchestration, jobs, SSE, downloads, media.
-\* `backend/src/services/bellaIntentClassifier.ts` — intent classification.
-\* `backend/src/services/assistant.ts` — providers, OpenClaw, media helpers, gbrain context hooks.
-\* `backend/src/services/bellaComposer.ts` — final reply composition.
-\* `backend/src/services/bellaOuterLlm.ts` — outer persona LLM.
-\* `backend/src/services/bellaPersona.ts` — Bella system prompt.
-\* `backend/src/services/bellaState.ts` — session and intent memory.
+- `backend/src/routes/assistant.ts` — orchestration, jobs, SSE, downloads, and media.  
+- `backend/src/services/bellaIntentClassifier.ts` — intent classification.  
+- `backend/src/services/assistant.ts` — model providers, OpenClaw, media helpers, gbrain context hooks.  
+- `backend/src/services/bellaComposer.ts` — final reply assembly.  
+- `backend/src/services/bellaOuterLlm.ts` — outer persona LLM.  
+- `backend/src/services/bellaPersona.ts` — Bella system prompt.  
+- `backend/src/services/bellaState.ts` — session and intent memory.
 
-\\---
+---
 
-## OpenClaw environment variables (reminder)
+## OpenClaw environment variables
 
-Not shipped in-repo; configure your gateway separately. Typical backend vars: \*\*`OPENCLAW\\\_GATEWAY\\\_URL`\*\*, \*\*`OPENCLAW\\\_GATEWAY\\\_TOKEN`\*\* (or compatible), \*\*`OPENCLAW\\\_AGENT\\\_ID`\*\*.
-
-
+The gateway is not shipped in this repository; install and configure it separately. Common backend variables: **`OPENCLAW_GATEWAY_URL`**, **`OPENCLAW_GATEWAY_TOKEN`** (or compatible names), **`OPENCLAW_AGENT_ID`**.
