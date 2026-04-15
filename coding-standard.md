@@ -90,3 +90,4 @@ Long-running engineering rules for frontend, backend, automation scripts, and AI
 - Each setup doc should contain: scenario, prerequisites, install steps, `openclaw.json` snippet, verification, troubleshooting (recommended).
 - `skills/*/SKILL.md` must stay action-oriented: triggers, inputs/outputs, limits, failure handling.
 - Upstream attribution (e.g. LobsterAI) belongs in a “Source” section, not in primary project naming.
+

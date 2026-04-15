@@ -28,6 +28,7 @@ backend/data/
 
 # Local scratch (often gateway URLs/tokens)
 gateway.txt
+/.local/
 
 # Windows reserved name accidentally created as a repo file under WSL/Linux
 /nul
