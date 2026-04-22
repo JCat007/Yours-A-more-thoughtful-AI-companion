@@ -74,7 +74,7 @@ function trimTail(text: string, max = 2000): string {
 }
 
 function getCanonicalSoulPath(): string {
-  return path.join(__dirname, '../../../docs/templates/Bella-SOUL.md');
+  return path.join(__dirname, '../../../../docs/templates/Bella-SOUL.md');
 }
 
 function getOpenClawWorkspaceCandidatesForSync(): string[] {
