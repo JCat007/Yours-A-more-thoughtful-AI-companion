@@ -1,6 +1,6 @@
 # AI 伴侣记忆架构（Yours）
 
-English version: [`AI Companion Memory Architecture.md`](AI Companion Memory Architecture.md)
+English version: [`AI Companion Memory Architecture.md`](https://github.com/JCat007/Yours-A-more-thoughtful-AI-companion/blob/main/AI%20Companion%20Memory%20Architecture/AI%20Companion%20Memory%20Architecture.md)
 
 ## 1. 文档目标与适用范围
 
