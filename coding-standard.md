@@ -91,3 +91,12 @@ Long-running engineering rules for frontend, backend, automation scripts, and AI
 - `skills/*/SKILL.md` must stay action-oriented: triggers, inputs/outputs, limits, failure handling.
 - Upstream attribution (e.g. LobsterAI) belongs in a “Source” section, not in primary project naming.
 
+## 11) Personal path sanitization (mandatory)
+
+- Never commit user-specific absolute paths (for example `/home/<name>/...`, `C:\Users\<name>\...`, machine hostnames, or shell prompts) in docs, code comments, examples, logs, or screenshots.
+- Use portable placeholders in all user-facing text and examples:
+  - Unix: `$HOME/...` or `/home/<user>/...`
+  - Windows: `%USERPROFILE%\...` or `C:\Users\<user>\...`
+- Before merge, scan for personal path leakage and replace with neutral placeholders.
+- If runtime diagnostics include sensitive local paths, redact or truncate them before exposing to users.
+

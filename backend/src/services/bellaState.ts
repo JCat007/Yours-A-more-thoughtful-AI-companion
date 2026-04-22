@@ -100,3 +100,32 @@ export function getMemoryStats() {
     stateFile: getStateFilePath(),
   };
 }
+
+export type BellaStateTurn = { role: 'user' | 'assistant'; content: string; ts: number };
+
+export function getSessionTurns(sessionKey: string): BellaStateTurn[] {
+  if (!sessionKey) return [];
+  const state = sessionMap.get(sessionKey);
+  if (!state) return [];
+  return [...state.turns].map((t) => ({ role: t.role, content: t.content, ts: t.ts }));
+}
+
+export function setSessionTurns(sessionKey: string, turns: BellaStateTurn[]) {
+  if (!sessionKey) return;
+  const prev = sessionMap.get(sessionKey) || { turns: [] };
+  const nextTurns = (turns || [])
+    .filter((t) => t && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string')
+    .slice(-MAX_TURNS)
+    .map((t) => ({ role: t.role, content: t.content, ts: Number(t.ts) || Date.now() }));
+  sessionMap.set(sessionKey, { turns: nextTurns, lastIntent: prev.lastIntent });
+  persistState();
+}
+
+export function listSessionKeysByUserId(userId: string): string[] {
+  if (!userId) return [];
+  const keys: string[] = [];
+  for (const key of sessionMap.keys()) {
+    if (key.includes(`:user:${userId}`)) keys.push(key);
+  }
+  return keys.sort();
+}

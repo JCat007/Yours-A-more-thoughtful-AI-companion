@@ -24,5 +24,8 @@ Must enforce:
 - Each setup doc must declare scope boundaries to avoid duplicate/overlapping instructions.
 - Skill setup docs should follow a consistent template: scenario, prerequisites, installation, `openclaw.json`, verification, troubleshooting.
 - For upstream attribution (e.g. LobsterAI), keep it as source note only, not as primary project naming.
+- Never commit user-specific absolute paths, hostnames, or shell prompts in docs/code examples (e.g. `/home/<name>/...`, `C:\Users\<name>\...`).
+- Use portable placeholders in user-facing examples: `$HOME/...` or `/home/<user>/...`; `%USERPROFILE%\...` or `C:\Users\<user>\...`.
+- Redact/truncate sensitive local paths in diagnostics before exposing to users.
 
 If a requested implementation conflicts with `coding-standard.md`, explain the conflict and propose a compliant approach.

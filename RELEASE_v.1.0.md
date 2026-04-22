@@ -1,6 +1,6 @@
 # Yours v.1.0
 
-**Release Date:** 
+**Release Date:** 2026-04-20
 
 ## Update
 
@@ -20,7 +20,7 @@ It also formalizes operational boundaries for switching, improves runtime observ
 ### 2) Manual Framework Switching (Idle-State Only)
 - Framework switching is supported as a **manual user action only**.
 - Switching is allowed only when Bella is in a completed idle state:
-  - final response already returned to frontend and backend flow is complete,
+  - no in-flight chat request remains for the user,
   - no active background task remains in the job manager.
 - This avoids hot-switch instability and partial execution corruption.
 
@@ -58,3 +58,17 @@ It also formalizes operational boundaries for switching, improves runtime observ
 - Switching APIs include validation, readiness checks, migration summaries, and error-safe rollback semantics.
 - Runtime state and migration decisions are structured for auditability and troubleshooting.
 - The architecture is prepared for future policy expansion (auto-routing, richer import flows, staged rollout controls).
+
+### 9) Release Gate Automation (Phase 9 Baseline)
+- Backend smoke coverage now includes:
+  - context migration,
+  - framework switching guards and migration outcomes,
+  - skill resolver priority and bridge-index writeback,
+  - file/download registry stability across framework switches.
+- Aggregated JSON gate command:
+  - `backend`: `npm run test:phase9-smoke:json`
+  - artifact: `backend/reports/phase9-smoke-report.json`
+- CI workflow is available at:
+  - `.github/workflows/phase9-smoke.yml`
+  - runs on pull requests and manual trigger (`workflow_dispatch`)
+  - uploads smoke artifact and appends failed-case summaries when checks fail.

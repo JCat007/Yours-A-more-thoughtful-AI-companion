@@ -31,4 +31,4 @@ If `.env` is not present in CI, the script exits successfully with a warning; ad
 
 ## Why you might not see `.env.example` in the file tree
 
-If you use both WSL (`/home/zhihao/...`) and a Windows copy (`C:\...`), they are different folders unless you use a single shared mount. Edit and commit from the same tree you opened in Cursor.
+If you use both WSL (`/home/<user>/...`) and a Windows copy (`C:\...`), they are different folders unless you use a single shared mount. Edit and commit from the same tree you opened in Cursor.

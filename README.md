@@ -2,6 +2,16 @@
 
 Chinese documentation is available in [`READMEcn.md`](READMEcn.md) at the repository root.
 
+![Bella Avatar](./frontend/public/bella-avatar.png)
+
+## Upgrade note / Breaking behavior change
+
+- The default behavior of `POST /api/assistant/framework/switch` changed from runtime-only switching to `switchMode=full_migrate`.
+- By default, `openclaw -> hermes` runs official `hermes claw migrate` (persona/memory/skills/config and optional secrets migration).
+- In the reverse direction (`hermes -> openclaw`), `full_migrate` now syncs canonical SOUL to OpenClaw workspace targets before committing the switch.
+- If the official migration fails, the API returns `SWITCH_HERMES_MIGRATION_FAILED` and the framework switch is not committed.
+- To keep the old behavior, pass `switchMode=runtime_only` explicitly.
+
 ## Everlasting and Yours
 
 **Everlasting** is an experiment in helping people achieve a form of digital persistence in an AI-native world. The long-term vision is to combine video, images, voice, and memory-oriented data so digital beings can feel emotion, carry personality and hobbies, and keep growing over time. Through Everlasting, people can meaningfully bring back those who are gone and the scenes that matter, so precious moments can live on in a digital world.
@@ -12,17 +22,18 @@ Chinese documentation is available in [`READMEcn.md`](READMEcn.md) at the reposi
 
 ## Architecture overview
 
-Yours is a **monorepo**: a **React + Vite** frontend, a **Node** backend, **PostgreSQL** by default (with **pgvector** when companion memory is enabled), and an optional **OpenClaw** gateway for tool-heavy work. The conversation pipeline is organized as **intent first**, **execution in the middle**, and **persona last**—not as a single flat LLM call.
+Yours is a **monorepo**: a **React + Vite** frontend, a **Node** backend, **PostgreSQL** by default (with **pgvector** when companion memory is enabled), and optional **OpenClaw / Hermes** execution runtimes for tool-heavy work. The conversation pipeline is organized as **intent first**, **execution in the middle**, and **persona last**—not as a single flat LLM call.
 
 ### Layers and responsibilities
 
 | Layer | Role | Typical code locations |
 |-------|------|------------------------|
-| **Intent (router) LLM** | Classifies each turn as casual chat, image-oriented, task-oriented, and so on; decides whether to use OpenClaw. Supports LLM-only, rules-only, or **hybrid** (fall back to rules when the LLM is low-confidence). Uploads force the task path and OpenClaw. | `bellaIntentClassifier.ts`, routing inside `assistant.ts` |
-| **Execution layer** | Light `chat_only` paths can use a **synchronous** direct model call for lower latency. Files, images, video, or multi-step work starts an **OpenClaw job** (SSE progress and polled results). Communicates with the gateway over an **OpenAI-compatible** HTTP API. | `assistant.ts`, `routes/assistant.ts` |
+| **Intent (router) LLM** | Classifies each turn as casual chat, image-oriented, task-oriented, and so on; decides whether to use the runtime path. Supports LLM-only, rules-only, or **hybrid** (fall back to rules when the LLM is low-confidence). Uploads force the task/runtime path. | `bellaIntentClassifier.ts`, routing inside `assistant.ts` |
+| **Execution layer** | Light `chat_only` paths can use a **synchronous** direct model call for lower latency. Files, images, video, or multi-step work enters the **agent runtime path** and is dispatched to OpenClaw or Hermes based on user framework + switch policy. | `assistant.ts`, `routes/assistant.ts`, `agent/AgentRuntimeRouter.ts` |
 | **Outer (persona) LLM** | Does **not** surface raw execution logs to the user. Rewrites execution output in Bella’s voice while preserving facts, and handles failures gently. System persona and SOUL body jointly constrain tone. | `bellaComposer.ts`, `bellaOuterLlm.ts`, `bellaPersona.ts` |
 | **OpenClaw** | Optional **executor**, not vendored in this repository. After the router dispatches work to the gateway, agents, tools, and **skills** (documents, media, web extraction, and more) carry it out. Configure via gateway URL, token, agent id, and related environment variables. | External CLI and gateway; see `docs/OPENCLAW_*.md` |
-| **gbrain and Postgres** | **Optional long-term companion memory**. Shares **`DATABASE_URL`** with Bella; when enabled, the backend invokes the **gbrain** CLI for retrieval and writes. Retrieved snippets are injected as generation context (OpenClaw paths also receive **write-scope** hints to avoid cross-user leakage). This is a **memory subsystem**; it does not replace the intent or persona LLMs. | `gbrainCli.ts`, `companionChatBridge.ts`, `docs/COMPANION_AUTH_GBRAIN.md` |
+| **Hermes** | Optional **executor**, invoked via Hermes CLI/runtime from the backend. Framework switch now defaults to full migration (`switchMode=full_migrate`) in both directions: OpenClaw -> Hermes runs official migrate; Hermes -> OpenClaw syncs canonical SOUL into OpenClaw workspaces. | `agent/adapters/HermesAdapter.ts`, `agent/hermesRuntime.ts`, `agent/FrameworkSwitchService.ts` |
+| **gbrain and Postgres** | **Optional long-term companion memory**. Shares **`DATABASE_URL`** with Bella; when enabled, the backend invokes the **gbrain** CLI for retrieval and writes. Retrieved snippets are injected as generation context (runtime paths receive scope hints to avoid cross-user leakage). This is a **memory subsystem**; it does not replace the intent or persona LLMs. | `gbrainCli.ts`, `companionChatBridge.ts`, `docs/COMPANION_AUTH_GBRAIN.md` |
 
 **Session state** (short-term context, previous-turn intent, and related fields) is maintained in `bellaState.ts`, independently of gbrain’s longer-horizon storage.
 
@@ -30,11 +41,152 @@ Yours is a **monorepo**: a **React + Vite** frontend, a **Node** backend, **Post
 
 1. Accept the message, history, uploads, and mode.  
 2. Load short-term session memory.  
-3. Run routing to obtain `intent`, `confidence`, and `shouldUseOpenClaw`.  
-4. Branch: synchronous text generation, or an OpenClaw job (including downloads and media where applicable).  
+3. Run routing to obtain `intent`, `confidence`, and runtime decision.  
+4. Branch: synchronous text generation, or the agent runtime path (OpenClaw/Hermes; including downloads and media where applicable).  
 5. If companion memory is enabled, merge **gbrain** retrieval into the context used for this turn’s generation.  
 6. Invoke the **outer persona LLM** to produce the final user-visible reply.  
 7. Return `reply`, `imageUrl`, `videoUrl`, and `downloads`; asynchronous job flows may also return `jobId`.
+
+### Framework configuration APIs
+
+The project now stores a per-user runtime framework preference and a default context strategy in `bella_user_settings`.
+
+- `agentFramework`: `openclaw` or `hermes` (default `openclaw`)
+- `contextStrategyDefault`: `last_20_turns` or `full_with_summary` (default `last_20_turns`)
+
+Current API surface:
+
+- `GET /api/assistant/framework/config`
+- `POST /api/assistant/framework/init`
+- `POST /api/assistant/framework/switch`
+
+`POST /api/assistant/framework/switch` now supports two semantics (default is full migration):
+
+- `switchMode=full_migrate` (default): besides session-context migration, `openclaw -> hermes` also runs official `hermes claw migrate` to sync persona/memory/skills/config (and secrets when enabled).
+- `switchMode=full_migrate` (default): for `hermes -> openclaw`, canonical SOUL is synced into OpenClaw workspace candidates before committing the framework switch.
+- `switchMode=runtime_only`: runtime framework + context only; skips official Hermes migration.
+
+Quick troubleshooting (`Failed to start hermes migrate: spawn hermes ENOENT`):
+
+- This means the backend process cannot find a runnable Hermes binary in its execution environment.
+- If you are already inside WSL, run `which hermes` directly (do not run `wsl ...` inside WSL).
+- If your Hermes binary exists at a fixed path (for example `$HOME/.venvs/hermes/bin/hermes`), set `BELLA_HERMES_MIGRATE_CMD` in `backend/.env`.
+- Example: `BELLA_HERMES_MIGRATE_CMD=$HOME/.venvs/hermes/bin/hermes`
+
+User checklist (copy/paste):
+
+```bash
+# 1) Open a WSL shell (Ubuntu), then run:
+which hermes
+
+# 2) If empty, but you know Hermes exists, set backend/.env:
+# BELLA_HERMES_MIGRATE_CMD=$HOME/.venvs/hermes/bin/hermes
+
+# 3) Restart backend, then retry framework switch.
+```
+
+Example `GET /api/assistant/framework/config` response:
+
+```json
+{
+  "framework": "openclaw",
+  "contextStrategyDefault": "last_20_turns",
+  "availableFrameworks": ["openclaw", "hermes"],
+  "availableContextStrategies": ["last_20_turns", "full_with_summary"]
+}
+```
+
+Example `POST /api/assistant/framework/init` body:
+
+```json
+{
+  "framework": "hermes"
+}
+```
+
+Example `POST /api/assistant/framework/switch` body:
+
+```json
+{
+  "targetFramework": "hermes",
+  "contextStrategy": "last_20_turns",
+  "switchMode": "full_migrate",
+  "migrateSecrets": true,
+  "workspaceTarget": "/home/you/projects/your-workspace"
+}
+```
+
+Example blocked response:
+
+```json
+{
+  "ok": false,
+  "code": "SWITCH_BLOCKED_NOT_IDLE",
+  "message": "Current task is still running.",
+  "blocking": {
+    "activeJobs": 1,
+    "inFlightRequests": 1
+  }
+}
+```
+
+Example success response:
+
+```json
+{
+  "ok": true,
+  "framework": "hermes",
+  "switchMode": "full_migrate",
+  "contextStrategy": "last_20_turns",
+  "migration": {
+    "strategy": "last_20_turns",
+    "turnsMigrated": 24,
+    "summaryIncluded": false
+  },
+  "frameworkMigration": {
+    "mode": "full_migrate",
+    "attempted": true,
+    "command": "hermes claw migrate --yes --preset full",
+    "followUps": [
+      "Review Hermes migration output for archived items (e.g. HEARTBEAT.md / TOOLS.md).",
+      "Start a new Hermes session so imported skills and memory are loaded."
+    ]
+  },
+  "observability": {
+    "pendingBackgroundWrites": 0,
+    "gbrainRuntimeStable": true
+  }
+}
+```
+
+Onboarding and settings behavior:
+
+- During sign-up, users can choose an initial framework (`openclaw` or `hermes`).
+- This preference is stored per account in `bella_user_settings.agent_framework`.
+- Users can later switch framework from settings without creating a new account.
+- Switching is blocked while background jobs are active **or** a chat request for the same user is still in-flight.
+- With `switchMode=full_migrate`, if `openclaw -> hermes` official migration fails, the API returns `SWITCH_HERMES_MIGRATION_FAILED` and the framework switch is not committed.
+- With `switchMode=full_migrate`, if `hermes -> openclaw` SOUL sync fails, the framework switch is also not committed.
+- With `migrateSecrets=true`, migration copies recognized provider key values from local OpenClaw config/env; raw keys are not displayed in the UI.
+
+### Quality gates and smoke suites
+
+Backend smoke suites:
+
+- `npm run test:context-migration-smoke`
+- `npm run test:framework-switch-smoke`
+- `npm run test:skill-resolver-smoke`
+- `npm run test:file-download-switch-smoke`
+- `npm run test:phase9-smoke:json`
+
+`test:phase9-smoke:json` writes aggregate JSON output to:
+
+- `backend/reports/phase9-smoke-report.json`
+
+CI workflow for this gate:
+
+- `.github/workflows/phase9-smoke.yml`
+
 
 ### Diagram
 
@@ -46,20 +198,28 @@ flowchart TB
 
   subgraph backend["Node backend"]
     API["/api/assistant/chat"]
+    FwCfg["Framework config APIs\n/init + config + switch"]
+    SwitchGate["Switch gate\nactive jobs + in-flight requests"]
+    Router["Agent runtime router\nopenclaw / hermes"]
     Intent["Intent router LLM\n(rules, hybrid)"]
     Exec{"Execution branch"}
     Sync["Direct LLM completion\n(light chat)"]
-    OCJob["OpenClaw job\n(SSE + results)"]
+    Rt["Runtime dispatch\n(user framework + switch mode)"]
+    OCJob["OpenClaw runtime path\n(SSE jobs + tool skills)"]
+    HermesRun["Hermes runtime path\n(Hermes CLI query)"]
     Mem["gbrain CLI\n(optional retrieval / writes)"]
     Outer["Outer persona LLM\n(Bella voice)"]
     API --> Intent
+    FwCfg --> SwitchGate
     Intent --> Exec
     Exec --> Sync
-    Exec --> OCJob
+    Exec --> Rt
+    Rt --> Router
+    Router --> OCJob
+    Router --> HermesRun
+    Router --> Outer
     API -.->|when enabled| Mem
     Mem -.-> Outer
-    Sync --> Outer
-    OCJob --> Outer
     Outer --> UI
   end
 
@@ -69,13 +229,21 @@ flowchart TB
 
   subgraph external["External processes"]
     GW[OpenClaw Gateway\nOpenAI-compatible API]
+    HC[Hermes CLI / runtime]
   end
 
   UI --> API
   OCJob <--> GW
+  HermesRun <--> HC
   API --> PG
   Mem <--> PG
 ```
+
+Legend:
+
+- `Rt` means runtime dispatch (`switchMode` + per-user framework preference).
+- `Switch gate` blocks switching while jobs or in-flight requests are active.
+- `OpenClaw runtime path` and `Hermes runtime path` are parallel executor branches behind the same API.
 
 For deeper implementation notes, see [`docs/ARCHITECTURE_AND_REFACTOR.md`](docs/ARCHITECTURE_AND_REFACTOR.md).
 
@@ -188,7 +356,6 @@ The following documents are intended for publication alongside the GitHub reposi
 | [`docs/ARCHITECTURE_AND_REFACTOR.md`](docs/ARCHITECTURE_AND_REFACTOR.md) | Current Bella stack: routing, execution, persona; request paths; module map; future refactor ideas. |
 | [`docs/OPENCLAW_DECISION_FLOW.md`](docs/OPENCLAW_DECISION_FLOW.md) | OpenClaw output shapes, skills mapping, URL routing versus the main intent classifier, SOUL and gateway notes. |
 | [`docs/BELLA_CAPABILITIES_AND_SKILLS.md`](docs/BELLA_CAPABILITIES_AND_SKILLS.md) | Bella capabilities and skills surface (overview). |
-| [`docs/templates/Bella-SOUL.md`](docs/templates/Bella-SOUL.md) | OpenClaw workspace SOUL template (copy to `~/.openclaw/workspace/SOUL.md`). |
 
 ### OpenClaw gateway and skills
 

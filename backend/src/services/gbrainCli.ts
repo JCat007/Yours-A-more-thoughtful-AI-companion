@@ -98,6 +98,25 @@ export function isGbrainEnabled(): boolean {
   return v === '1' || v === 'true' || v === 'yes';
 }
 
+export type GbrainRuntimeSnapshot = {
+  enabled: boolean;
+  home: string;
+  gbrainBin: string;
+  hasDatabaseUrl: boolean;
+  hasGbrainDatabaseUrl: boolean;
+};
+
+export function getGbrainRuntimeSnapshot(): GbrainRuntimeSnapshot {
+  const home = (process.env.HOME || process.env.USERPROFILE || '').trim();
+  return {
+    enabled: isGbrainEnabled(),
+    home,
+    gbrainBin: gbrainBin(),
+    hasDatabaseUrl: !!String(process.env.DATABASE_URL || '').trim(),
+    hasGbrainDatabaseUrl: !!String(process.env.GBRAIN_DATABASE_URL || '').trim(),
+  };
+}
+
 export function gbrainBin(): string {
   const b = (process.env.GBRAIN_BIN || 'gbrain').trim();
   return b || 'gbrain';
@@ -166,14 +185,18 @@ export async function runGbrain(
       }, 1500);
       reject(new Error(`gbrain timeout after ${timeoutMs}ms`));
     }, timeoutMs);
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (d: string) => {
-      stdout += d;
-    });
-    child.stderr.on('data', (d: string) => {
-      stderr += d;
-    });
+    if (child.stdout) {
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', (d: string) => {
+        stdout += d;
+      });
+    }
+    if (child.stderr) {
+      child.stderr.setEncoding('utf8');
+      child.stderr.on('data', (d: string) => {
+        stderr += d;
+      });
+    }
     child.on('error', (e) => {
       clearTimeout(t);
       reject(e);
@@ -247,14 +270,18 @@ export async function gbrainPut(slug: string, markdown: string, opts?: GbrainPut
 
         let stdoutBuf = '';
         let stderrBuf = '';
-        child.stdout.setEncoding('utf8');
-        child.stderr.setEncoding('utf8');
-        child.stdout.on('data', (d: string) => {
-          stdoutBuf += d;
-        });
-        child.stderr.on('data', (d: string) => {
-          stderrBuf += d;
-        });
+        if (child.stdout) {
+          child.stdout.setEncoding('utf8');
+          child.stdout.on('data', (d: string) => {
+            stdoutBuf += d;
+          });
+        }
+        if (child.stderr) {
+          child.stderr.setEncoding('utf8');
+          child.stderr.on('data', (d: string) => {
+            stderrBuf += d;
+          });
+        }
 
         const t = setTimeout(() => {
           try {

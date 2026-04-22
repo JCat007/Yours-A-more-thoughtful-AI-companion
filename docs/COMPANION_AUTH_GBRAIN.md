@@ -2,6 +2,16 @@
 
 The backend uses **PostgreSQL** (`DATABASE_URL`) for **Bella users, sessions, and settings**. **gbrain** can use the **same** database (`gbrain init --url` creates its own tables alongside `bella_*`; names do not collide).
 
+As of the framework baseline phase, `bella_user_settings` also stores:
+
+- `agent_framework` (`openclaw` or `hermes`, default `openclaw`)
+- `context_strategy_default` (`last_20_turns` or `full_with_summary`, default `last_20_turns`)
+
+These values are exposed through:
+
+- `GET /api/assistant/framework/config`
+- `POST /api/assistant/framework/init`
+
 ---
 
 ## Quick start (minimal: only `POSTGRES_PASSWORD`)
