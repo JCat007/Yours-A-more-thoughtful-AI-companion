@@ -2,7 +2,7 @@
 
 Chinese documentation is available in [`READMEcn.md`](READMEcn.md) at the repository root.
 
-![Bella Avatar](./frontend/public/bella-avatar.png)
+<img src="./frontend/public/bella-avatar.png" alt="Bella Avatar" width="320" />
 
 ## Upgrade note / Breaking behavior change
 
