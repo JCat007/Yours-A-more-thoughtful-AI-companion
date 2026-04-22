@@ -1,6 +1,6 @@
 # AI Companion Memory Architecture (Yours)
 
-Chinese version: [`AI 伴侣记忆架构.md`]([AI 伴侣记忆架构.md](https://github.com/JCat007/Yours-A-more-thoughtful-AI-companion/blob/main/AI%20Companion%20Memory%20Architecture/AI%20%E4%BC%B4%E4%BE%A3%E8%AE%B0%E5%BF%86%E6%9E%B6%E6%9E%84.md))
+Chinese version: [`AI 伴侣记忆架构.md`](https://github.com/JCat007/Yours-A-more-thoughtful-AI-companion/blob/main/AI%20Companion%20Memory%20Architecture/AI%20%E4%BC%B4%E4%BE%A3%E8%AE%B0%E5%BF%86%E6%9E%B6%E6%9E%84.md)
 
 ## 1. Objective and Scope
 
