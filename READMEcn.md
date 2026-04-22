@@ -2,7 +2,9 @@
 
 英文说明见仓库根目录 [`README.md`](README.md)。
 
-<img src="./frontend/public/bella-avatar.png" alt="Bella Avatar" width="320" />
+<p align="center">
+  <img src="./frontend/public/bella-avatar.png" alt="Bella Avatar" width="320" />
+</p>
 
 ## Upgrade note / Breaking behavior change
 
