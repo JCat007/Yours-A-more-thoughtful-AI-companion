@@ -3,6 +3,19 @@ import bcrypt from 'bcryptjs';
 import prisma from '../prisma';
 
 const SALT_ROUNDS = 10;
+const AGENT_FRAMEWORKS = ['openclaw', 'hermes'] as const;
+const CONTEXT_STRATEGIES = ['last_20_turns', 'full_with_summary'] as const;
+
+export type AgentFramework = (typeof AGENT_FRAMEWORKS)[number];
+export type ContextStrategy = (typeof CONTEXT_STRATEGIES)[number];
+
+function normalizeFramework(framework: unknown): AgentFramework {
+  return framework === 'hermes' ? 'hermes' : 'openclaw';
+}
+
+function normalizeContextStrategy(strategy: unknown): ContextStrategy {
+  return strategy === 'full_with_summary' ? 'full_with_summary' : 'last_20_turns';
+}
 
 function hashSessionToken(raw: string): string {
   return crypto.createHash('sha256').update(raw, 'utf8').digest('hex');
@@ -84,13 +97,20 @@ export async function getUserSettings(userId: string) {
       userId,
       companionMemoryEnabled: false,
       autoLearnEnabled: true,
+      agentFramework: 'openclaw',
+      contextStrategyDefault: 'last_20_turns',
     }
   );
 }
 
 export async function updateUserSettings(
   userId: string,
-  patch: { companionMemoryEnabled?: boolean; autoLearnEnabled?: boolean }
+  patch: {
+    companionMemoryEnabled?: boolean;
+    autoLearnEnabled?: boolean;
+    agentFramework?: AgentFramework;
+    contextStrategyDefault?: ContextStrategy;
+  }
 ) {
   return prisma.bellaUserSettings.upsert({
     where: { userId },
@@ -99,14 +119,43 @@ export async function updateUserSettings(
       companionMemoryEnabled:
         typeof patch.companionMemoryEnabled === 'boolean' ? patch.companionMemoryEnabled : false,
       autoLearnEnabled: typeof patch.autoLearnEnabled === 'boolean' ? patch.autoLearnEnabled : true,
+      agentFramework: normalizeFramework(patch.agentFramework),
+      contextStrategyDefault: normalizeContextStrategy(patch.contextStrategyDefault),
     },
     update: {
       ...(typeof patch.companionMemoryEnabled === 'boolean'
         ? { companionMemoryEnabled: patch.companionMemoryEnabled }
         : {}),
       ...(typeof patch.autoLearnEnabled === 'boolean' ? { autoLearnEnabled: patch.autoLearnEnabled } : {}),
+      ...(typeof patch.agentFramework === 'string'
+        ? { agentFramework: normalizeFramework(patch.agentFramework) }
+        : {}),
+      ...(typeof patch.contextStrategyDefault === 'string'
+        ? { contextStrategyDefault: normalizeContextStrategy(patch.contextStrategyDefault) }
+        : {}),
     },
   });
+}
+
+export async function getUserAgentConfig(userId: string) {
+  const settings = await getUserSettings(userId);
+  return {
+    framework: normalizeFramework(settings.agentFramework),
+    contextStrategyDefault: normalizeContextStrategy(settings.contextStrategyDefault),
+    availableFrameworks: [...AGENT_FRAMEWORKS] as AgentFramework[],
+    availableContextStrategies: [...CONTEXT_STRATEGIES] as ContextStrategy[],
+  };
+}
+
+export async function initUserAgentConfig(userId: string, framework: unknown) {
+  const nextFramework = normalizeFramework(framework);
+  const updated = await updateUserSettings(userId, { agentFramework: nextFramework });
+  return {
+    framework: normalizeFramework(updated.agentFramework),
+    contextStrategyDefault: normalizeContextStrategy(updated.contextStrategyDefault),
+    availableFrameworks: [...AGENT_FRAMEWORKS] as AgentFramework[],
+    availableContextStrategies: [...CONTEXT_STRATEGIES] as ContextStrategy[],
+  };
 }
 
 /** Ops: set BELLA_PASSWORD_RESET_TOKEN in env; send header X-Bella-Password-Reset: <token> */

@@ -12,11 +12,12 @@ fi
 # Avoid proxies (MiniMax China)
 unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy
 
-# OpenClaw env (China mode defaults)
-export OPENCLAW_GATEWAY_URL=http://127.0.0.1:18789
-export OPENCLAW_MODEL_CHINA=minimax-cn/MiniMax-M2.7
-export OPENCLAW_AGENT_ID=main-china
-unset OPENCLAW_MODEL_FALLBACKS
+# OpenClaw env (China mode defaults; keep existing env if set)
+: "${OPENCLAW_GATEWAY_URL:=http://127.0.0.1:18789}"
+: "${OPENCLAW_MODEL_CHINA:=minimax-cn/MiniMax-M2.7}"
+: "${OPENCLAW_AGENT_ID:=main-china}"
+export OPENCLAW_GATEWAY_URL OPENCLAW_MODEL_CHINA OPENCLAW_AGENT_ID
+[ -z "${OPENCLAW_MODEL_FALLBACKS+x}" ] && unset OPENCLAW_MODEL_FALLBACKS
 
 # Read gateway token from ~/.openclaw/openclaw.json if present
 OPENCLAW_TOKEN_FROM_CFG=""
@@ -32,5 +33,7 @@ fi
 echo "OPENCLAW_MODEL_CHINA=$OPENCLAW_MODEL_CHINA"
 echo "OPENCLAW_AGENT_ID=$OPENCLAW_AGENT_ID"
 [ -n "${OPENCLAW_GATEWAY_TOKEN-}" ] && echo "OPENCLAW_GATEWAY_TOKEN=******" || echo "OPENCLAW_GATEWAY_TOKEN=(empty)"
+echo "HERMES_ROOT=${HERMES_ROOT-(${HOME:-~}/projects/hermes default)}"
+echo "HERMES_VENV=${HERMES_VENV-(from backend/.env or shell)}"
 
 npm run dev

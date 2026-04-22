@@ -28,6 +28,15 @@ backend/data/
 
 # Local scratch (often gateway URLs/tokens)
 gateway.txt
+/.local/
+
+# Internal/local-only templates (not needed for public GitHub publishing)
+docs/templates/openclaw-*.json
+docs/templates/Bella-SOUL.md
+
+# Internal execution/progress docs (not needed for public publishing)
+docs/AGENT_FRAMEWORK_V1_PHASE9_MIN_TEST_PLAN.md
+docs/AGENT_FRAMEWORK_V1_PHASES_1_4_STATUS.md
 
 # Windows reserved name accidentally created as a repo file under WSL/Linux
 /nul
@@ -59,3 +68,4 @@ Thumbs.db
 
 # Prisma
 prisma/migrations/
+backend/reports/

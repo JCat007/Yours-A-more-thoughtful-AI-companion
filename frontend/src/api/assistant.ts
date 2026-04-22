@@ -11,6 +11,9 @@ export interface ChatMessage {
 }
 
 export type BellaMode = 'china' | 'world';
+export type AgentFramework = 'openclaw' | 'hermes';
+export type ContextStrategy = 'last_20_turns' | 'full_with_summary';
+export type FrameworkSwitchMode = 'full_migrate' | 'runtime_only';
 
 /** UI language from `LanguageContext` — weak fallback for reply language when user text is ambiguous. */
 export type AssistantUiLocale = 'zh' | 'en';
@@ -27,6 +30,47 @@ export interface AssistantConfig {
   skills: { id: string; name: string; summary: string }[];
   runtimeOptions: BellaRuntimeOptions;
 }
+
+export interface AssistantFrameworkConfig {
+  framework: AgentFramework;
+  contextStrategyDefault: ContextStrategy;
+  availableFrameworks: AgentFramework[];
+  availableContextStrategies: ContextStrategy[];
+}
+
+export type FrameworkSwitchResponse =
+  | {
+      ok: true;
+      framework: AgentFramework;
+      switchMode: FrameworkSwitchMode;
+      contextStrategy: ContextStrategy;
+      migration: { strategy: ContextStrategy; turnsMigrated: number; summaryIncluded: boolean };
+      frameworkMigration?: {
+        mode: FrameworkSwitchMode;
+        attempted: boolean;
+        command?: string;
+        durationMs?: number;
+        stdoutTail?: string;
+        stderrTail?: string;
+        followUps?: string[];
+      };
+      observability?: {
+        pendingBackgroundWrites: number;
+        gbrainRuntimeStable: boolean;
+      };
+    }
+  | {
+      ok: false;
+      code:
+        | 'SWITCH_BLOCKED_NOT_IDLE'
+        | 'SWITCH_TARGET_SAME_AS_CURRENT'
+        | 'SWITCH_CONTEXT_EXPORT_FAILED'
+        | 'SWITCH_CONTEXT_IMPORT_FAILED'
+        | 'SWITCH_HERMES_MIGRATION_FAILED'
+        | 'SWITCH_INTERNAL_ERROR';
+      message: string;
+      blocking?: { activeJobs: number; inFlightRequests?: number };
+    };
 
 export interface AssistantDebugInfo {
   provider: string;
@@ -156,6 +200,28 @@ export const assistantApi = {
   },
   getConfig: async (mode?: BellaMode) => {
     const res = await client.get<AssistantConfig>('/assistant/config', mode ? { params: { mode } } : undefined);
+    return res.data;
+  },
+  getFrameworkConfig: async () => {
+    const res = await client.get<AssistantFrameworkConfig>('/assistant/framework/config');
+    return res.data;
+  },
+  initFramework: async (framework: AgentFramework) => {
+    const res = await client.post<AssistantFrameworkConfig>('/assistant/framework/init', { framework });
+    return res.data;
+  },
+  switchFramework: async (
+    targetFramework: AgentFramework,
+    contextStrategy: ContextStrategy = 'last_20_turns',
+    options?: { switchMode?: FrameworkSwitchMode; migrateSecrets?: boolean; workspaceTarget?: string }
+  ) => {
+    const res = await client.post<FrameworkSwitchResponse>('/assistant/framework/switch', {
+      targetFramework,
+      contextStrategy,
+      switchMode: options?.switchMode,
+      migrateSecrets: options?.migrateSecrets,
+      workspaceTarget: options?.workspaceTarget,
+    });
     return res.data;
   },
   getRuntimeOptions: async (mode?: BellaMode) => {

@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { assistantApi, type BellaMode, type AssistantConfig, type BellaRuntimeOptions } from '../../api/assistant';
+import {
+  assistantApi,
+  type BellaMode,
+  type AssistantConfig,
+  type BellaRuntimeOptions,
+  type AssistantFrameworkConfig,
+  type AgentFramework,
+  type FrameworkSwitchMode,
+} from '../../api/assistant';
 import { useBellaAuth } from '../../contexts/BellaAuthContext';
 import { useMode } from '../../contexts/ModeContext';
 
@@ -8,10 +16,23 @@ interface ModeModalProps {
   onClose: () => void;
 }
 
+type FrameworkSwitchStage = 'idle' | 'checking_idle' | 'migrating' | 'completed' | 'blocked' | 'failed';
+
 export default function ModeModal({ open, onClose }: ModeModalProps) {
   const { mode: currentMode, setMode } = useMode();
   const { user, settings, loading: authLoading, refresh, updateSettings, openAuthModal } = useBellaAuth();
   const [config, setConfig] = useState<AssistantConfig | null>(null);
+  const [frameworkConfig, setFrameworkConfig] = useState<AssistantFrameworkConfig | null>(null);
+  const [selectedContextStrategy, setSelectedContextStrategy] = useState<'last_20_turns' | 'full_with_summary'>('last_20_turns');
+  const [switchingFramework, setSwitchingFramework] = useState(false);
+  const [switchStage, setSwitchStage] = useState<FrameworkSwitchStage>('idle');
+  const [switchStatusText, setSwitchStatusText] = useState('');
+  const [switchFollowUps, setSwitchFollowUps] = useState<string[]>([]);
+  const [switchCommand, setSwitchCommand] = useState('');
+  const [switchMode, setSwitchMode] = useState<FrameworkSwitchMode>('full_migrate');
+  const [migrateSecrets, setMigrateSecrets] = useState(true);
+  const [workspaceTarget, setWorkspaceTarget] = useState('');
+  const [pendingSwitchTarget, setPendingSwitchTarget] = useState<AgentFramework | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [companionOpen, setCompanionOpen] = useState(false);
@@ -25,6 +46,20 @@ export default function ModeModal({ open, onClose }: ModeModalProps) {
       .then(setConfig)
       .catch(() => setConfig(null))
       .finally(() => setLoading(false));
+
+    assistantApi
+      .getFrameworkConfig()
+      .then((data) => {
+        setFrameworkConfig(data);
+        setSelectedContextStrategy(data.contextStrategyDefault);
+        setSwitchStage('idle');
+        setSwitchStatusText('');
+        setSwitchFollowUps([]);
+        setSwitchCommand('');
+      })
+      .catch(() => {
+        setFrameworkConfig(null);
+      });
   }, [open, currentMode]);
 
   useEffect(() => {
@@ -82,6 +117,90 @@ export default function ModeModal({ open, onClose }: ModeModalProps) {
     }
   };
 
+  const executeSwitchFramework = async (targetFramework: AgentFramework) => {
+    if (!frameworkConfig || switchingFramework || frameworkConfig.framework === targetFramework) return;
+    setSwitchingFramework(true);
+    setSwitchFollowUps([]);
+    setSwitchCommand('');
+    setSwitchStage('checking_idle');
+    setSwitchStatusText(isZh ? '正在检查是否可切换（idle）...' : 'Checking if framework switch is allowed (idle check)...');
+    try {
+      setSwitchStage('migrating');
+      setSwitchStatusText(
+        switchMode === 'full_migrate'
+          ? (isZh ? '正在迁移上下文并同步 Hermes 资产...' : 'Migrating context and syncing Hermes assets...')
+          : (isZh ? '正在迁移上下文（runtime only）...' : 'Migrating context (runtime only)...')
+      );
+      const result = await assistantApi.switchFramework(targetFramework, selectedContextStrategy, {
+        switchMode,
+        migrateSecrets,
+        workspaceTarget: workspaceTarget.trim() || undefined,
+      });
+      if (!result.ok) {
+        if (result.code === 'SWITCH_BLOCKED_NOT_IDLE') {
+          const inFlight = result.blocking?.inFlightRequests ?? 0;
+          const activeJobs = result.blocking?.activeJobs ?? 0;
+          setSwitchStage('blocked');
+          setSwitchStatusText(
+            isZh
+              ? `当前任务仍在运行，请稍后重试（activeJobs=${activeJobs}, inFlight=${inFlight}）`
+              : `Current task is still running. Try again later (activeJobs=${activeJobs}, inFlight=${inFlight}).`
+          );
+        } else if (result.code === 'SWITCH_TARGET_SAME_AS_CURRENT') {
+          setSwitchStage('blocked');
+          setSwitchStatusText(isZh ? '目标框架与当前一致。' : 'Target framework is already current.');
+        } else if (result.code === 'SWITCH_HERMES_MIGRATION_FAILED') {
+          setSwitchStage('failed');
+          setSwitchStatusText(
+            result.message ||
+              (isZh ? 'Hermes 官方迁移失败，框架未切换。请检查迁移输出后重试。' : 'Hermes migration failed and switch was not applied.')
+          );
+        } else {
+          setSwitchStage('failed');
+          setSwitchStatusText(result.message || (isZh ? '上下文迁移失败，请重试。' : 'Context migration failed. Please retry.'));
+        }
+      } else {
+        setSwitchFollowUps(result.frameworkMigration?.followUps || []);
+        if (result.frameworkMigration?.command) setSwitchCommand(result.frameworkMigration.command);
+        setSwitchStage('completed');
+        if (result.observability && result.observability.pendingBackgroundWrites > 0) {
+          setSwitchStatusText(
+            isZh
+              ? `切换完成（迁移 ${result.migration.turnsMigrated} turns，模式=${result.switchMode}），仍有 ${result.observability.pendingBackgroundWrites} 条记忆写入在后台进行。`
+              : `Switch completed (${result.migration.turnsMigrated} turns, mode=${result.switchMode}). ${result.observability.pendingBackgroundWrites} memory writes are still running in background.`
+          );
+        } else {
+          setSwitchStatusText(
+            isZh
+              ? `切换完成（迁移 ${result.migration.turnsMigrated} turns，模式=${result.switchMode}）。`
+              : `Switch completed (${result.migration.turnsMigrated} turns, mode=${result.switchMode}).`
+          );
+        }
+        const latest = await assistantApi.getFrameworkConfig();
+        setFrameworkConfig(latest);
+      }
+    } catch {
+      setSwitchStage('failed');
+      setSwitchStatusText(isZh ? '框架切换失败，请稍后重试。' : 'Failed to switch framework. Please retry.');
+    } finally {
+      setSwitchingFramework(false);
+    }
+  };
+
+  const requestSwitchFramework = (targetFramework: AgentFramework) => {
+    if (!frameworkConfig || switchingFramework || frameworkConfig.framework === targetFramework) return;
+    setPendingSwitchTarget(targetFramework);
+  };
+
+  const switchStatusColorClass =
+    switchStage === 'completed'
+      ? 'text-emerald-300'
+      : switchStage === 'blocked' || switchStage === 'failed'
+        ? 'text-rose-300'
+        : switchStage === 'checking_idle' || switchStage === 'migrating'
+          ? 'text-amber-200'
+          : 'text-white/70';
+
   return (
     <>
     <div
@@ -129,6 +248,104 @@ export default function ModeModal({ open, onClose }: ModeModalProps) {
                 {isZh ? '国际 World' : 'World'}
               </button>
             </div>
+          </div>
+
+          <div>
+            <label className="bella-label">{isZh ? 'Agent 框架' : 'Agent framework'}</label>
+            {frameworkConfig ? (
+              <div className="space-y-2 mt-1">
+                <p className="text-sm bella-kv">
+                  {isZh ? '当前：' : 'Current: '}
+                  <span className="mono">{frameworkConfig.framework}</span>
+                </p>
+                <div className="flex gap-2">
+                  {frameworkConfig.availableFrameworks.map((fw) => {
+                    const active = frameworkConfig.framework === fw;
+                    return (
+                      <button
+                        key={fw}
+                        type="button"
+                        disabled={switchingFramework || active}
+                        onClick={() => requestSwitchFramework(fw)}
+                        className={`flex-1 bella-toggle-btn ${active ? 'is-active' : ''}`}
+                      >
+                        {fw === 'openclaw' ? 'OpenClaw' : 'Hermes'}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center gap-2 text-xs bella-kv">
+                  <span>{isZh ? '迁移策略' : 'Context strategy'}</span>
+                  <select
+                    className="bella-select text-xs"
+                    value={selectedContextStrategy}
+                    onChange={(e) =>
+                      setSelectedContextStrategy(
+                        e.target.value === 'full_with_summary' ? 'full_with_summary' : 'last_20_turns'
+                      )
+                    }
+                    disabled={switchingFramework}
+                  >
+                    <option value="last_20_turns">last_20_turns</option>
+                    <option value="full_with_summary">full_with_summary</option>
+                  </select>
+                </div>
+                <div className="grid gap-1.5 text-xs bella-kv">
+                  <label className="flex items-center justify-between gap-2">
+                    <span>{isZh ? '切换模式' : 'Switch mode'}</span>
+                    <select
+                      className="bella-select text-xs"
+                      value={switchMode}
+                      onChange={(e) =>
+                        setSwitchMode(e.target.value === 'runtime_only' ? 'runtime_only' : 'full_migrate')
+                      }
+                      disabled={switchingFramework}
+                    >
+                      <option value="full_migrate">
+                        {isZh ? 'full_migrate（推荐）' : 'full_migrate (recommended)'}
+                      </option>
+                      <option value="runtime_only">runtime_only</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={migrateSecrets}
+                      disabled={switchingFramework || switchMode === 'runtime_only'}
+                      onChange={(e) => setMigrateSecrets(e.target.checked)}
+                    />
+                    <span>{isZh ? '迁移密钥（migrate-secrets）' : 'Migrate secrets (migrate-secrets)'}</span>
+                  </label>
+                  <label className="grid gap-1">
+                    <span>{isZh ? '工作区目标（可选）' : 'Workspace target (optional)'}</span>
+                    <input
+                      className="w-full rounded-lg bg-black/30 border border-white/10 px-2 py-1.5 text-xs"
+                      value={workspaceTarget}
+                      onChange={(e) => setWorkspaceTarget(e.target.value)}
+                      disabled={switchingFramework || switchMode === 'runtime_only'}
+                      placeholder={isZh ? '/home/you/projects/xxx' : '/home/you/projects/xxx'}
+                    />
+                  </label>
+                </div>
+                {switchStatusText ? (
+                  <div className="space-y-1">
+                    <p className={`text-xs ${switchStatusColorClass}`}>{switchStatusText}</p>
+                    {switchCommand ? <p className="text-[11px] text-white/45 mono break-all">{switchCommand}</p> : null}
+                    {switchFollowUps.length > 0 ? (
+                      <ul className="list-disc pl-4 text-[11px] text-white/60 space-y-0.5">
+                        {switchFollowUps.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-xs bella-label mt-1">
+                {isZh ? '框架信息加载失败' : 'Failed to load framework settings'}
+              </p>
+            )}
           </div>
 
           <div>
@@ -362,6 +579,73 @@ export default function ModeModal({ open, onClose }: ModeModalProps) {
           >
             {isZh ? '关闭' : 'Close'}
           </button>
+        </div>
+      </div>
+    )}
+
+    {pendingSwitchTarget && (
+      <div
+        className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-4"
+        onClick={() => setPendingSwitchTarget(null)}
+        role="presentation"
+      >
+        <div
+          className="w-full max-w-md rounded-2xl bg-zinc-900 border border-white/10 p-4 text-sm text-white shadow-xl space-y-3"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="framework-switch-confirm-title"
+        >
+          <h3 id="framework-switch-confirm-title" className="font-medium">
+            {isZh ? '确认切换框架' : 'Confirm framework switch'}
+          </h3>
+          <p className="text-xs text-white/75 leading-relaxed">
+            {isZh
+              ? `将从 ${frameworkConfig?.framework || 'unknown'} 切换到 ${pendingSwitchTarget}。模式：${switchMode}。`
+              : `Switch from ${frameworkConfig?.framework || 'unknown'} to ${pendingSwitchTarget}. Mode: ${switchMode}.`}
+          </p>
+          {switchMode === 'full_migrate' ? (
+            <div className="space-y-1">
+              <p className="text-xs text-amber-200 leading-relaxed">
+                {isZh
+                  ? '将执行完整迁移（可能涉及 SOUL/记忆/skills/配置同步），耗时可能更长。'
+                  : 'Full migration will run (SOUL/memory/skills/config sync may apply) and can take longer.'}
+              </p>
+              {migrateSecrets ? (
+                <p className="text-xs text-rose-200 leading-relaxed">
+                  {isZh
+                    ? '当前已启用密钥迁移（migrateSecrets=true）：将从本机 OpenClaw 配置/环境中迁移可识别的 provider key 值；UI 不会展示明文密钥。'
+                    : 'Secrets migration is enabled (migrateSecrets=true): recognized provider key values are copied from local OpenClaw config/env; raw keys are not shown in the UI.'}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-xs text-white/60 leading-relaxed">
+              {isZh
+                ? '当前是 runtime_only，仅切换运行时与上下文，不做完整迁移。'
+                : 'Current mode is runtime_only: runtime + context only, no full migration.'}
+            </p>
+          )}
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              className="flex-1 rounded-lg bg-white/10 py-2 hover:bg-white/15"
+              onClick={() => setPendingSwitchTarget(null)}
+            >
+              {isZh ? '取消' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-lg bg-amber-500/90 text-black font-medium py-2 hover:bg-amber-400"
+              onClick={() => {
+                const target = pendingSwitchTarget;
+                setPendingSwitchTarget(null);
+                if (target) void executeSwitchFramework(target);
+              }}
+            >
+              {isZh ? '确认切换' : 'Confirm switch'}
+            </button>
+          </div>
         </div>
       </div>
     )}

@@ -39,6 +39,8 @@ model BellaUserSettings {
   user                   BellaUser @relation(fields: [userId], references: [id], onDelete: Cascade)
   companionMemoryEnabled Boolean @default(false) @map("companion_memory_enabled")
   autoLearnEnabled       Boolean @default(true) @map("auto_learn_enabled")
+  agentFramework         String  @default("openclaw") @map("agent_framework")
+  contextStrategyDefault String  @default("last_20_turns") @map("context_strategy_default")
 
   @@map("bella_user_settings")
 }

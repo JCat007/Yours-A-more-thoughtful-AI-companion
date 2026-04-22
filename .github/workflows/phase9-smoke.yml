@@ -1,0 +1,94 @@
+name: phase9-smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  backend-phase9-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bella_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bella_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bella_ci?schema=public
+      GBRAIN_ENABLED: "0"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Apply database migrations
+        working-directory: backend
+        run: npm run prisma:deploy
+
+      - name: Run phase9 smoke JSON suite
+        working-directory: backend
+        run: npm run test:phase9-smoke:json
+
+      - name: Upload phase9 smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase9-smoke-report
+          path: backend/reports/phase9-smoke-report.json
+          if-no-files-found: warn
+
+      - name: Append failed case summary
+        if: failure()
+        working-directory: backend
+        run: |
+          node -e "
+          const fs = require('fs');
+          const p = 'reports/phase9-smoke-report.json';
+          if (!fs.existsSync(p)) {
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Phase9 smoke failure\n\nNo aggregate report file found.\n');
+            process.exit(0);
+          }
+          const report = JSON.parse(fs.readFileSync(p, 'utf8'));
+          const failed = [];
+          for (const suite of report.reports || []) {
+            for (const c of suite.cases || []) {
+              if (c.status === 'failed') {
+                failed.push({ suiteId: suite.suiteId, id: c.id, error: c.error || '' });
+              }
+            }
+          }
+          let md = '## Phase9 smoke failure\n\n';
+          md += '- Overall status: `' + report.status + '`\n';
+          md += '- Failed suites: `' + ((report.summary && report.summary.failedSuites) || 0) + '`\n';
+          md += '- Failed cases: `' + ((report.summary && report.summary.totalFailed) || failed.length) + '`\n\n';
+          if (failed.length === 0) {
+            md += 'No per-case failure details in report.\n';
+          } else {
+            md += '| Suite | Case | Error |\n|---|---|---|\n';
+            for (const f of failed) {
+              md += '| ' + f.suiteId + ' | ' + f.id + ' | ' + String(f.error).replace(/\\|/g, '\\\\|') + ' |\n';
+            }
+          }
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
+          "

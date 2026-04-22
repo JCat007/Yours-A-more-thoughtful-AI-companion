@@ -5,7 +5,7 @@ let cachedSoul = '';
 
 /** Repo `docs/templates/Bella-SOUL.md` (works from `src/` or compiled `dist/`). */
 function getSoulFilePath(): string {
-  return path.join(__dirname, '../../../docs/templates/Bella-SOUL.md');
+  return path.join(__dirname, '../../../../docs/templates/Bella-SOUL.md');
 }
 
 export function loadSoulText(): string {

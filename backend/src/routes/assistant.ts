@@ -33,6 +33,13 @@ import {
 import { optionalBellaAuth } from '../middleware/optionalBellaAuth';
 import { buildOpenClawGbrainWriteScopeSystemMessage } from '../lib/openclawCompanionScope';
 import { loadCompanionMemoryContext, maybeScheduleCompanionMemoryWrite } from '../services/companionChatBridge';
+import { getUserAgentConfig, initUserAgentConfig } from '../services/authService';
+import { agentRuntimeRouter } from '../services/agent/AgentRuntimeRouter';
+import { switchUserFramework } from '../services/agent/FrameworkSwitchService';
+import { markUserChatRequestFinished, markUserChatRequestStarted } from '../services/agent/frameworkSwitchGate';
+import { getFrameworkSkillStore, getSkillStoresRoot } from '../services/skills/SkillBridgeIndexService';
+import { resolveSkillRuntime } from '../services/skills/SkillResolverService';
+import { syncSkillBridgeIndex } from '../services/skills/SkillSyncService';
 
 const router = express.Router();
 
@@ -215,6 +222,20 @@ function registerDownloadableFile(fullPath: string, originalName: string, mimeTy
   return meta;
 }
 
+/** Test-only helper: register a downloadable artifact without running full chat pipeline. */
+export function __testOnlyRegisterDownloadableForSmoke(
+  fullPath: string,
+  originalName: string,
+  mimeType = 'application/octet-stream'
+) {
+  return registerDownloadableFile(fullPath, originalName, mimeType);
+}
+
+/** Test-only helper: read downloadable metadata by id. */
+export function __testOnlyGetDownloadableMetaForSmoke(id: string) {
+  return downloadableFiles.get(id) || null;
+}
+
 function listOutputFilesWithMtime(dir: string): Map<string, number> {
   const map = new Map<string, number>();
   if (!fs.existsSync(dir)) return map;
@@ -241,6 +262,15 @@ function buildBellaSessionKey(req: express.Request, bellaMode?: 'china' | 'world
   if (userId) return `${mode}:user:${userId}`;
   const ip = req.ip || 'unknown-ip';
   return `${mode}:anon:${ip}`;
+}
+
+function getActiveJobsCountForUser(req: express.Request, userId: string): number {
+  const chinaKey = buildBellaSessionKey(req, 'china', userId);
+  const worldKey = buildBellaSessionKey(req, 'world', userId);
+  return (
+    bellaJobManager.getActiveJobsForSession(chinaKey).length +
+    bellaJobManager.getActiveJobsForSession(worldKey).length
+  );
 }
 
 function buildDebugSnapshot() {
@@ -476,9 +506,12 @@ function getOpenClawLiveSkills(isChina: boolean): AssistantSkillSummary[] {
   const home = process.env.HOME || process.env.USERPROFILE || '';
   const openclawRoot = path.join(home, '.openclaw');
   const openclawJsonPath = path.join(openclawRoot, 'openclaw.json');
-  const skillsRoot = path.join(openclawRoot, 'skills');
+  const legacySkillsRoot = getSkillStoresRoot();
+  const openclawSkillsRoot = getFrameworkSkillStore('openclaw');
+  const hermesSkillsRoot = getFrameworkSkillStore('hermes');
   const cfg = readJsonSafe(openclawJsonPath) || {};
   const entries = (cfg?.skills?.entries && typeof cfg.skills.entries === 'object') ? cfg.skills.entries : {};
+  syncSkillBridgeIndex();
   const ids = new Set<string>();
 
   for (const key of Object.keys(entries)) {
@@ -486,8 +519,18 @@ function getOpenClawLiveSkills(isChina: boolean): AssistantSkillSummary[] {
     if (entry?.enabled) ids.add(String(key));
   }
 
-  if (fs.existsSync(skillsRoot)) {
-    for (const dirent of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
+  if (fs.existsSync(legacySkillsRoot)) {
+    for (const dirent of fs.readdirSync(legacySkillsRoot, { withFileTypes: true })) {
+      if (dirent.isDirectory()) ids.add(dirent.name);
+    }
+  }
+  if (fs.existsSync(openclawSkillsRoot)) {
+    for (const dirent of fs.readdirSync(openclawSkillsRoot, { withFileTypes: true })) {
+      if (dirent.isDirectory()) ids.add(dirent.name);
+    }
+  }
+  if (fs.existsSync(hermesSkillsRoot)) {
+    for (const dirent of fs.readdirSync(hermesSkillsRoot, { withFileTypes: true })) {
       if (dirent.isDirectory()) ids.add(dirent.name);
     }
   }
@@ -510,18 +553,27 @@ function buildSkillsPreflight() {
   const openclawJsonPath = path.join(openclawRoot, 'openclaw.json');
   const openclawJson = readJsonSafe(openclawJsonPath) || {};
   const entries = openclawJson?.skills?.entries || {};
-  const skillsRoot = path.join(openclawRoot, 'skills');
+  const skillsRoot = getSkillStoresRoot();
+  const openclawSkillsRoot = getFrameworkSkillStore('openclaw');
+  const hermesSkillsRoot = getFrameworkSkillStore('hermes');
+  syncSkillBridgeIndex();
 
   const checks = FILE_TASK_SKILLS.map((skill) => {
     const entry = entries?.[skill];
     const enabled = !!entry?.enabled;
-    const dir = path.join(skillsRoot, skill);
-    const installed = fs.existsSync(dir);
+    const resolution = resolveSkillRuntime('openclaw', skill);
+    const resolvedRuntime = resolution.resolvedRuntime || 'openclaw';
+    const frameworkStore = getFrameworkSkillStore(resolvedRuntime);
+    const dir = path.join(frameworkStore, resolution.resolvedSkillName);
+    const legacyDir = path.join(skillsRoot, skill);
+    const installed = fs.existsSync(dir) || fs.existsSync(legacyDir);
     return {
       skill,
       enabled,
       installed,
       path: dir,
+      resolvedRuntime,
+      resolvedReason: resolution.reason,
       ok: enabled && installed,
       hint: enabled && installed ? 'ok' : (!installed ? 'missing skill directory' : 'disabled in openclaw.json'),
     };
@@ -535,6 +587,10 @@ function buildSkillsPreflight() {
     openclawRoot,
     openclawJsonPath,
     skillsRoot,
+    dualStores: {
+      openclaw: openclawSkillsRoot,
+      hermes: hermesSkillsRoot,
+    },
     checks,
     allOk: checks.every((c) => c.ok),
     execApprovalsPath,
@@ -679,6 +735,7 @@ router.post('/upload-file', async (req, res) => {
 
 /** POST /api/assistant/chat — main Bella chat (OpenClaw path + media skills); other providers keep legacy flow */
 router.post('/chat', async (req, res) => {
+  let trackedInFlightUserId: string | null = null;
   try {
     const requestId = crypto.randomUUID().slice(0, 8);
     let clientDisconnected = false;
@@ -701,6 +758,10 @@ router.post('/chat', async (req, res) => {
     const trimmed = message.trim();
     if (!trimmed) {
       return res.status(400).json({ error: 'message 不能为空' });
+    }
+    if (req.bellaUser?.id) {
+      trackedInFlightUserId = req.bellaUser.id;
+      markUserChatRequestStarted(trackedInFlightUserId);
     }
 
     const messages: { role: 'user' | 'assistant' | 'system'; content: string }[] = (history || []).slice(-20).map((m) => ({
@@ -754,6 +815,14 @@ router.post('/chat', async (req, res) => {
 
     const provider = (process.env.ASSISTANT_CHAT_PROVIDER || 'openai').toLowerCase().trim();
     const useOpenClawFlow = provider === 'openclaw' || provider === 'clawra';
+    let resolvedAgentFramework: 'openclaw' | 'hermes' = 'openclaw';
+    if (req.bellaUser?.id) {
+      try {
+        resolvedAgentFramework = (await getUserAgentConfig(req.bellaUser.id)).framework;
+      } catch {
+        resolvedAgentFramework = 'openclaw';
+      }
+    }
     const modeForPersona: 'china' | 'world' = (bellaMode === 'world' ? 'world' : 'china');
     const sessionKey = buildBellaSessionKey(req, bellaMode, req.bellaUser?.id ?? null);
     const recentUserTextsFromHistory = (history || []).filter((m) => m.role === 'user').map((m) => m.content || '').slice(-6);
@@ -862,7 +931,11 @@ router.post('/chat', async (req, res) => {
     const callOpenClawWithRetries = async (agentId: string, phase: 'sync' | 'job'): Promise<string> => {
       let text = '';
       try {
-        text = await chatWithAssistant(messages, '', undefined, bellaMode ?? 'china', agentId, undefined, undefined, {
+        text = await agentRuntimeRouter.chat({
+          framework: resolvedAgentFramework,
+          messages,
+          mode: bellaMode ?? 'china',
+          agentId,
           bellaUserId: req.bellaUser?.id ?? null,
         });
       } catch (firstErr: any) {
@@ -875,7 +948,11 @@ router.post('/chat', async (req, res) => {
             { role: 'system' as const, content: buildSkillRetrySystemMessage(requiredSkills, resolvedUploads) },
           ];
           pushDebugEvent('info', `openclaw.call.retry_skill_first.${phase}`, `requiredSkills=${requiredSkills.join(',') || 'n/a'}`);
-          text = await chatWithAssistant(retryMessages, '', undefined, bellaMode ?? 'china', agentId, undefined, undefined, {
+          text = await agentRuntimeRouter.chat({
+            framework: resolvedAgentFramework,
+            messages: retryMessages,
+            mode: bellaMode ?? 'china',
+            agentId,
             bellaUserId: req.bellaUser?.id ?? null,
           });
         } else if (resolvedUploads.length === 0 && isBrowserFailureRetryable(msg)) {
@@ -888,7 +965,11 @@ router.post('/chat', async (req, res) => {
             },
           ];
           pushDebugEvent('info', `openclaw.call.retry_browser_escalation.${phase}`, 'openclaw-profile-then-web-to-markdown');
-          text = await chatWithAssistant(retryMessages, '', undefined, bellaMode ?? 'china', agentId, undefined, undefined, {
+          text = await agentRuntimeRouter.chat({
+            framework: resolvedAgentFramework,
+            messages: retryMessages,
+            mode: bellaMode ?? 'china',
+            agentId,
             bellaUserId: req.bellaUser?.id ?? null,
           });
         } else if (
@@ -905,7 +986,11 @@ router.post('/chat', async (req, res) => {
             },
           ];
           pushDebugEvent('info', `openclaw.call.retry_search_bing_browser.${phase}`, 'browser-only-bing');
-          text = await chatWithAssistant(retryMessages, '', undefined, bellaMode ?? 'china', agentId, undefined, undefined, {
+          text = await agentRuntimeRouter.chat({
+            framework: resolvedAgentFramework,
+            messages: retryMessages,
+            mode: bellaMode ?? 'china',
+            agentId,
             bellaUserId: req.bellaUser?.id ?? null,
           });
         } else {
@@ -927,7 +1012,11 @@ router.post('/chat', async (req, res) => {
           },
         ];
         pushDebugEvent('info', `openclaw.call.retry_content_escalation.${phase}`, 'web-to-markdown-only');
-        text = await chatWithAssistant(retryMessages, '', undefined, bellaMode ?? 'china', agentId, undefined, undefined, {
+        text = await agentRuntimeRouter.chat({
+          framework: resolvedAgentFramework,
+          messages: retryMessages,
+          mode: bellaMode ?? 'china',
+          agentId,
           bellaUserId: req.bellaUser?.id ?? null,
         });
       }
@@ -1332,6 +1421,10 @@ router.post('/chat', async (req, res) => {
     res.status(500).json({
       error: error.message || '助理对话失败',
     });
+  } finally {
+    if (trackedInFlightUserId) {
+      markUserChatRequestFinished(trackedInFlightUserId);
+    }
   }
 });
 
@@ -1435,6 +1528,77 @@ router.get('/config', async (_req, res) => {
   } catch (error: any) {
     console.error('获取助理配置失败:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+/** GET /api/assistant/framework/config — user framework config */
+router.get('/framework/config', async (req, res) => {
+  try {
+    if (!req.bellaUser?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const data = await getUserAgentConfig(req.bellaUser.id);
+    res.json(data);
+  } catch (error: any) {
+    console.error('获取框架配置失败:', error);
+    res.status(500).json({ error: error?.message || 'Failed to get framework config' });
+  }
+});
+
+/** POST /api/assistant/framework/init — initialize user framework preference */
+router.post('/framework/init', async (req, res) => {
+  try {
+    if (!req.bellaUser?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const framework = String(req.body?.framework || '').trim().toLowerCase();
+    if (framework !== 'openclaw' && framework !== 'hermes') {
+      return res.status(400).json({ error: 'framework must be openclaw or hermes' });
+    }
+    const data = await initUserAgentConfig(req.bellaUser.id, framework);
+    res.json(data);
+  } catch (error: any) {
+    console.error('初始化框架配置失败:', error);
+    res.status(500).json({ error: error?.message || 'Failed to init framework config' });
+  }
+});
+
+/** POST /api/assistant/framework/switch — switch user framework when idle */
+router.post('/framework/switch', async (req, res) => {
+  try {
+    if (!req.bellaUser?.id) return res.status(401).json({ error: 'Unauthorized' });
+    const targetFramework = String(req.body?.targetFramework || '').trim().toLowerCase();
+    const contextStrategy = String(req.body?.contextStrategy || 'last_20_turns').trim().toLowerCase();
+    const switchMode = String(req.body?.switchMode || 'full_migrate').trim().toLowerCase();
+    const migrateSecrets = req.body?.migrateSecrets;
+    const workspaceTargetRaw = req.body?.workspaceTarget;
+    if (targetFramework !== 'openclaw' && targetFramework !== 'hermes') {
+      return res.status(400).json({ error: 'targetFramework must be openclaw or hermes' });
+    }
+    if (contextStrategy !== 'last_20_turns' && contextStrategy !== 'full_with_summary') {
+      return res.status(400).json({ error: 'contextStrategy must be last_20_turns or full_with_summary' });
+    }
+    if (switchMode !== 'full_migrate' && switchMode !== 'runtime_only') {
+      return res.status(400).json({ error: 'switchMode must be full_migrate or runtime_only' });
+    }
+    if (typeof migrateSecrets !== 'undefined' && typeof migrateSecrets !== 'boolean') {
+      return res.status(400).json({ error: 'migrateSecrets must be boolean when provided' });
+    }
+    if (typeof workspaceTargetRaw !== 'undefined' && typeof workspaceTargetRaw !== 'string') {
+      return res.status(400).json({ error: 'workspaceTarget must be string when provided' });
+    }
+    const workspaceTarget = typeof workspaceTargetRaw === 'string' ? workspaceTargetRaw.trim() : undefined;
+
+    const activeJobs = getActiveJobsCountForUser(req, req.bellaUser.id);
+    const result = await switchUserFramework({
+      userId: req.bellaUser.id,
+      targetFramework,
+      contextStrategy,
+      activeJobs,
+      switchMode,
+      migrateSecrets,
+      workspaceTarget,
+    });
+    return res.json(result);
+  } catch (error: any) {
+    console.error('切换框架失败:', error);
+    res.status(500).json({ ok: false, code: 'SWITCH_INTERNAL_ERROR', message: error?.message || 'Switch failed' });
   }
 });
 

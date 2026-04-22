@@ -73,9 +73,13 @@ wsl !WSL_TARGET! !WSL_USER_FLAG! -- bash --noprofile --norc -lc "!BASHPX!if [ -x
 wsl !WSL_TARGET! !WSL_USER_FLAG! -- bash --noprofile --norc -lc "!BASHPX!for p in 18789 3001 5173 19000; do if command -v lsof >/dev/null 2>&1; then pid=\$(lsof -ti:\$p -sTCP:LISTEN); [ -n \"\$pid\" ] && kill -9 \$pid 2>/dev/null || true; elif command -v fuser >/dev/null 2>&1; then fuser -k \${p}/tcp 2>/dev/null || true; fi; done"
 
 taskkill /FI "WINDOWTITLE eq OpenClaw Gateway*" /FI "IMAGENAME eq powershell.exe" /T /F >nul 2>nul
+taskkill /FI "WINDOWTITLE eq OpenClaw Gateway*" /FI "IMAGENAME eq cmd.exe" /T /F >nul 2>nul
 taskkill /FI "WINDOWTITLE eq Backend*" /FI "IMAGENAME eq powershell.exe" /T /F >nul 2>nul
+taskkill /FI "WINDOWTITLE eq Backend*" /FI "IMAGENAME eq cmd.exe" /T /F >nul 2>nul
 taskkill /FI "WINDOWTITLE eq Frontend*" /FI "IMAGENAME eq powershell.exe" /T /F >nul 2>nul
+taskkill /FI "WINDOWTITLE eq Frontend*" /FI "IMAGENAME eq cmd.exe" /T /F >nul 2>nul
 taskkill /FI "WINDOWTITLE eq Star Office Backend*" /FI "IMAGENAME eq powershell.exe" /T /F >nul 2>nul
+taskkill /FI "WINDOWTITLE eq Star Office Backend*" /FI "IMAGENAME eq cmd.exe" /T /F >nul 2>nul
 
 echo Done.
 echo Note: if some unrelated PowerShell windows remain open, close them manually.

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useBellaAuth } from '../../contexts/BellaAuthContext';
+import { assistantApi, type AgentFramework } from '../../api/assistant';
 
 export default function BellaAuthModal() {
   const { lang } = useLanguage();
@@ -15,6 +16,7 @@ export default function BellaAuthModal() {
   const [tab, setTab] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [framework, setFramework] = useState<AgentFramework>('openclaw');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -23,6 +25,7 @@ export default function BellaAuthModal() {
       setTab('login');
       setUsername('');
       setPassword('');
+      setFramework('openclaw');
       setErr('');
       setAuthDraftUsername('');
     }
@@ -82,6 +85,29 @@ export default function BellaAuthModal() {
             autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
           />
         </label>
+        {tab === 'register' ? (
+          <div className="space-y-1">
+            <span className="text-white/60 text-xs">
+              {isZh ? '初始框架（后续可在设置中切换）' : 'Initial framework (you can switch later in settings)'}
+            </span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className={`rounded-lg py-1.5 border ${framework === 'openclaw' ? 'bg-white/15 border-white/40' : 'bg-white/5 border-white/10'}`}
+                onClick={() => setFramework('openclaw')}
+              >
+                OpenClaw
+              </button>
+              <button
+                type="button"
+                className={`rounded-lg py-1.5 border ${framework === 'hermes' ? 'bg-white/15 border-white/40' : 'bg-white/5 border-white/10'}`}
+                onClick={() => setFramework('hermes')}
+              >
+                Hermes
+              </button>
+            </div>
+          </div>
+        ) : null}
         {err ? <p className="text-rose-300 text-xs">{err}</p> : null}
         <div className="flex gap-2 pt-1">
           <button
@@ -100,7 +126,10 @@ export default function BellaAuthModal() {
               setErr('');
               try {
                 if (tab === 'login') await login(username, password);
-                else await register(username, password);
+                else {
+                  await register(username, password);
+                  await assistantApi.initFramework(framework);
+                }
                 setPassword('');
               } catch (e: unknown) {
                 const ex = e as { response?: { data?: { error?: string } }; message?: string };

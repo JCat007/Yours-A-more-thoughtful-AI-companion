@@ -2,6 +2,36 @@ import { buildDefaultCompanionPreferencesMarkdown } from '../lib/companionPrefer
 import { getUserSettings } from './authService';
 import { gbrainGet, gbrainPut, gbrainTimelineAdd, isGbrainEnabled } from './gbrainCli';
 
+const pendingWritesByUser = new Map<string, number>();
+
+function incPendingWrite(userId: string) {
+  pendingWritesByUser.set(userId, (pendingWritesByUser.get(userId) || 0) + 1);
+}
+
+function decPendingWrite(userId: string) {
+  const cur = pendingWritesByUser.get(userId) || 0;
+  if (cur <= 1) pendingWritesByUser.delete(userId);
+  else pendingWritesByUser.set(userId, cur - 1);
+}
+
+export function getPendingBackgroundWrites(userId?: string): number {
+  if (userId) return pendingWritesByUser.get(userId) || 0;
+  let sum = 0;
+  for (const n of pendingWritesByUser.values()) sum += n;
+  return sum;
+}
+
+/**
+ * Test-only helper for smoke/integration scripts.
+ * Do not use in request/runtime code paths.
+ */
+export function __testOnlySetPendingBackgroundWrites(userId: string, pending: number): void {
+  if (!userId) return;
+  const n = Math.max(0, Math.floor(Number(pending) || 0));
+  if (n <= 0) pendingWritesByUser.delete(userId);
+  else pendingWritesByUser.set(userId, n);
+}
+
 function truncate(s: string, n: number): string {
   const t = s.replace(/\s+/g, ' ').trim();
   if (t.length <= n) return t;
@@ -73,8 +103,11 @@ export type CompanionMemoryTurn = {
  * Non-blocking: schedules background gbrain writes (never awaited from chat request path).
  */
 export function scheduleCompanionMemoryAfterTurn(turn: CompanionMemoryTurn): void {
+  incPendingWrite(turn.userId);
   setImmediate(() => {
-    void runCompanionMemoryTurn(turn).catch((e) => console.error('[companion-memory]', e));
+    void runCompanionMemoryTurn(turn)
+      .catch((e) => console.error('[companion-memory]', e))
+      .finally(() => decPendingWrite(turn.userId));
   });
 }
 

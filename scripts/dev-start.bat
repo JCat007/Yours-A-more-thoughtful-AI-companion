@@ -117,6 +117,9 @@ wsl !WSL_TARGET! -u !WSL_USER! -- bash --noprofile --norc -lc "!BASHPX!cd \"!WSL
 echo [prep] Ensure dev helper scripts and backend/run-dev.sh are executable...
 wsl !WSL_TARGET! -u !WSL_USER! -- bash --noprofile --norc -lc "!BASHPX!cd \"!WSL_PROJECT_DIR!\" && chmod +x backend/run-dev.sh scripts/wsl-openclaw-gateway.sh scripts/wsl-backend-dev.sh scripts/wsl-frontend-dev.sh scripts/wsl-star-office-backend.sh scripts/wsl-is-port-busy.sh 2>nul" 1>nul 2>nul
 
+echo [prep] Normalize WSL helper scripts to LF line endings...
+wsl !WSL_TARGET! -u !WSL_USER! -- bash --noprofile --norc -lc "!BASHPX!cd \"!WSL_PROJECT_DIR!\" && sed -i 's/\r$//' scripts/wsl-openclaw-gateway.sh scripts/wsl-backend-dev.sh scripts/wsl-frontend-dev.sh scripts/wsl-star-office-backend.sh scripts/wsl-is-port-busy.sh backend/run-dev.sh 2>/dev/null || true" 1>nul 2>nul
+
 set "PORT_LISTENING=0"
 for /f "delims=" %%A in ('wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-is-port-busy.sh" 18789 2^>nul') do set "PORT_LISTENING=%%A"
 
@@ -127,7 +130,7 @@ if "!PORT_LISTENING!"=="1" (
 
 echo [start] OpenClaw Gateway (18789^)
 REM Do not use start+powershell+long -Command (CMD misparses -f from test/[ and breaks). Use wsl+bash+repo script.
-start "OpenClaw Gateway" wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-openclaw-gateway.sh"
+start "OpenClaw Gateway" "%SystemRoot%\System32\cmd.exe" /k wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-openclaw-gateway.sh"
 
 set "PORT_LISTENING=0"
 for /f "delims=" %%A in ('wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-is-port-busy.sh" 3001 2^>nul') do set "PORT_LISTENING=%%A"
@@ -137,7 +140,7 @@ if "!PORT_LISTENING!"=="1" (
   wsl !WSL_TARGET! -u !WSL_USER! -- bash --noprofile --norc -lc "!BASHPX!PIDS=\$(if command -v lsof >/dev/null 2>&1; then lsof -ti:3001 -sTCP:LISTEN; elif command -v ss >/dev/null 2>&1; then ss -ltnp sport = :3001 | sed -n 's/.*pid=\([0-9]\+\).*/\1/p'; fi); if [ -n \"\$PIDS\" ]; then echo \"\$PIDS\" | xargs -r kill; sleep 1; fi" 1>nul 2>nul
 )
 echo [start] Backend (3001^)
-start "Backend" wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-backend-dev.sh"
+start "Backend" "%SystemRoot%\System32\cmd.exe" /k wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-backend-dev.sh"
 
 set "PORT_LISTENING=0"
 for /f "delims=" %%A in ('wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-is-port-busy.sh" 5173 2^>nul') do set "PORT_LISTENING=%%A"
@@ -146,7 +149,7 @@ if "!PORT_LISTENING!"=="1" (
   echo [skip] Frontend already listening on 5173
 ) else (
   echo [start] Frontend (5173^)
-  start "Frontend" wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-frontend-dev.sh"
+  start "Frontend" "%SystemRoot%\System32\cmd.exe" /k wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-frontend-dev.sh"
 )
 
 set "PORT_LISTENING=0"
@@ -159,7 +162,7 @@ if errorlevel 1 (
   echo [skip] Star Office backend already listening on 19000
 ) else (
   echo [start] Star Office backend (19000^)
-  start "Star Office Backend" wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-star-office-backend.sh"
+  start "Star Office Backend" "%SystemRoot%\System32\cmd.exe" /k wsl !WSL_TARGET! -u !WSL_USER! -- bash "!WSL_PROJECT_DIR!/scripts/wsl-star-office-backend.sh"
 )
 
 echo.
