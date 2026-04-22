@@ -6,14 +6,6 @@ Chinese documentation is available in [`READMEcn.md`](READMEcn.md) at the reposi
   <img src="./frontend/public/bella-avatar.png" alt="Bella Avatar" width="320" />
 </p>
 
-## Upgrade note / Breaking behavior change
-
-- The default behavior of `POST /api/assistant/framework/switch` changed from runtime-only switching to `switchMode=full_migrate`.
-- By default, `openclaw -> hermes` runs official `hermes claw migrate` (persona/memory/skills/config and optional secrets migration).
-- In the reverse direction (`hermes -> openclaw`), `full_migrate` now syncs canonical SOUL to OpenClaw workspace targets before committing the switch.
-- If the official migration fails, the API returns `SWITCH_HERMES_MIGRATION_FAILED` and the framework switch is not committed.
-- To keep the old behavior, pass `switchMode=runtime_only` explicitly.
-
 ## Everlasting and Yours
 
 **Everlasting** is an experiment in helping people achieve a form of digital persistence in an AI-native world. The long-term vision is to combine video, images, voice, and memory-oriented data so digital beings can feel emotion, carry personality and hobbies, and keep growing over time. Through Everlasting, people can meaningfully bring back those who are gone and the scenes that matter, so precious moments can live on in a digital world.
@@ -426,3 +418,13 @@ The following documents are intended for publication alongside the GitHub reposi
 ## OpenClaw environment variables
 
 The gateway is not shipped in this repository; install and configure it separately. Common backend variables: **`OPENCLAW_GATEWAY_URL`**, **`OPENCLAW_GATEWAY_TOKEN`** (or compatible names), **`OPENCLAW_AGENT_ID`**.
+
+---
+
+## Upgrade note / Breaking behavior change
+
+- The default behavior of `POST /api/assistant/framework/switch` changed from runtime-only switching to `switchMode=full_migrate`.
+- By default, `openclaw -> hermes` runs official `hermes claw migrate` (persona/memory/skills/config and optional secrets migration).
+- In the reverse direction (`hermes -> openclaw`), `full_migrate` now syncs canonical SOUL to OpenClaw workspace targets before committing the switch.
+- If the official migration fails, the API returns `SWITCH_HERMES_MIGRATION_FAILED` and the framework switch is not committed.
+- To keep the old behavior, pass `switchMode=runtime_only` explicitly.

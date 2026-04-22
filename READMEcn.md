@@ -6,14 +6,6 @@
   <img src="./frontend/public/bella-avatar.png" alt="Bella Avatar" width="320" />
 </p>
 
-## Upgrade note / Breaking behavior change
-
-- `POST /api/assistant/framework/switch` 的默认语义已从“仅运行时切换”变更为 `switchMode=full_migrate`。
-- 默认会在 `openclaw -> hermes` 方向执行官方 `hermes claw migrate`（迁移人格/记忆/skills/配置，可选密钥）。
-- 反向 `hermes -> openclaw` 时，`full_migrate` 也会在提交切换前把 canonical SOUL 同步到 OpenClaw workspace 目标路径。
-- 若官方迁移失败，将返回 `SWITCH_HERMES_MIGRATION_FAILED`，并保持原框架不变（不提交切换）。
-- 如需旧行为，请显式传 `switchMode=runtime_only`。
-
 ## Everlasting 与 Yours
 
 Everlasting 是一个让人物在 AI 世界实现数字永生的尝试，其终极愿景是通过视频、图片、声音以及（记忆）数据合成技术，让数字人物像真人一样拥有感情、性格、爱好，并具备不断成长的能力。通过 Everlasting，每个人都可以真正地“重现”那些已经远去的人和场景，让珍贵的美好在赛博世界里永生。
@@ -405,3 +397,13 @@ npm run build
 ## OpenClaw 环境变量提示
 
 网关不在本仓库内，需单独安装与配置。后端常见变量：**`OPENCLAW_GATEWAY_URL`**、**`OPENCLAW_GATEWAY_TOKEN`**（或兼容名）、**`OPENCLAW_AGENT_ID`**。
+
+---
+
+## Upgrade note / Breaking behavior change
+
+- `POST /api/assistant/framework/switch` 的默认语义已从“仅运行时切换”变更为 `switchMode=full_migrate`。
+- 默认会在 `openclaw -> hermes` 方向执行官方 `hermes claw migrate`（迁移人格/记忆/skills/配置，可选密钥）。
+- 反向 `hermes -> openclaw` 时，`full_migrate` 也会在提交切换前把 canonical SOUL 同步到 OpenClaw workspace 目标路径。
+- 若官方迁移失败，将返回 `SWITCH_HERMES_MIGRATION_FAILED`，并保持原框架不变（不提交切换）。
+- 如需旧行为，请显式传 `switchMode=runtime_only`。
